@@ -27,6 +27,18 @@ results/
 *-private.pem
 keys/
 
+# LaTeX build artifacts (paper sources are tracked; build output is not)
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.pdf
+paper/*.toc
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+
 # OS / editor
 .DS_Store
 *.swp
