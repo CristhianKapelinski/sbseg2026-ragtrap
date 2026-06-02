@@ -227,12 +227,12 @@ def run_e1_baseline_judge(
     *,
     top_k: int = 5,
     max_questions: int | None = None,
-    usd_per_call: float = 0.0,
 ) -> dict[str, object]:
     """RAGForensics LLM-judge baseline over the identical top-k suspects.
 
-    One model call per context. Returns the same detection metrics plus measured wall-clock,
-    model-call count, and a per-incident cost (``usd_per_call`` priced at the published API rate).
+    One local-model call per context. Returns the same detection metrics plus measured wall-clock
+    and the model-call count. The judge runs locally, so there is no API billing; the honest cost
+    signal is the model-call count and the wall-clock latency, never a dollar figure.
     """
     conf = ConfusionCounts()
     total_calls = 0
@@ -262,6 +262,4 @@ def run_e1_baseline_judge(
         "model_calls": total_calls,
         "latency_s_total": total_seconds,
         "latency_s_per_suspect": total_seconds / n_suspects if n_suspects else 0.0,
-        "usd_per_call": usd_per_call,
-        "estimated_usd_cost": total_calls * usd_per_call,
     }

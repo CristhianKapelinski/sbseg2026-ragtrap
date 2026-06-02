@@ -238,9 +238,7 @@
       "work_units": 1000,
       "model_calls": 1000,
       "latency_s_total": 1654.3539324670564,
-      "latency_s_per_suspect": 1.6543539324670564,
-      "usd_per_call": 0.0001245,
-      "estimated_usd_cost": 0.12449999999999999
+      "latency_s_per_suspect": 1.6543539324670564
     },
     "headline": {
       "ragtrap_latency_s_total": 0.1016553919762373,
@@ -248,8 +246,7 @@
       "latency_speedup": 16274.138541060114,
       "ragtrap_per_suspect_us": 101.6553919762373,
       "baseline_per_suspect_s": 1.6543539324670564,
-      "ragtrap_usd_cost": 0.0,
-      "baseline_usd_cost": 0.12449999999999999,
+      "ragtrap_model_calls": 0,
       "ragtrap_work_units": 1000,
       "baseline_model_calls": 1000
     }

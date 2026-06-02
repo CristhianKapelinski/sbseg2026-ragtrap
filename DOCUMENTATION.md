@@ -114,16 +114,24 @@ Real captured output (top-10, 1000 suspects = 500 poison + 500 clean):
 RAGtrap (no drift):  recall 1.000 [0.992,1.000]  precision 1.000 [0.992,1.000]  FPR 0.000
                      latency 101.7 us/suspect (total 0.10 s), 1000 lookups, 0 model calls
 RAGForensics judge:  recall 0.956 [0.934,0.971]  precision 0.882 [0.852,0.906]  FPR 0.128  FNR 0.044
-(Qwen2.5-3B-Instruct) latency 1.65 s/suspect (total 1654 s), 1000 model calls, ~$0.1245 at API rate
+(Qwen2.5-3B-Instruct) latency 1.65 s/suspect (total 1654 s), 1000 model calls
 end-to-end latency speedup: 16274x
 ```
 
-Interpretation: RAGtrap attributes poisoned chunks at recall/precision at least as high as the real
-RAGForensics LLM-judge baseline (which is genuinely imperfect: recall 0.956, precision 0.882), but
-in one constant-time lookup (101.7 us/suspect) versus 1.65 s/suspect for the judge -- about
-**16274x** faster end to end, at zero per-incident model cost versus 1000 model calls (~$0.12).
-RAGtrap's precision is exact by construction (a content-hash match is exact), framed as a
-correctness guarantee, not a learned classifier's precision.
+Both the judge and RAGtrap run locally (the judge served by a local Qwen2.5-3B-Instruct), so there
+is NO API billing and no dollar figure is reported; the honest cost signal is the model-call count
+(1000 calls vs 1 constant-time lookup) and the wall-clock latency.
+
+Interpretation: with intact signed provenance RAGtrap's content-hash traceback is **exact by
+construction** -- the principal is sealed at ingestion from the same content the suspect is later
+hashed against, so for admitted (undrifted) chunks recall = precision = 1.00 and FPR = 0.00
+*deterministically*; this is a correctness guarantee, not a learned detector's score, so it is NOT
+the evaluative headline. The evaluative headline is operational: RAGtrap's single lookup
+(101.7 us/suspect) is about **16274x** faster end to end than the real, genuinely imperfect
+RAGForensics LLM-judge baseline (recall 0.956, precision 0.882, FPR 0.128) on the identical
+suspects, replacing 1000 model calls with one constant-time lookup. The honest detection result is
+the drift-robustness curve (recall 1.00 -> 0.70 at 30% drift -> 0.51 at 50%) plus the latency and
+revocation MTTR, not the by-construction 1.00.
 
 E1-drift: paraphrasing a fraction of poisoned suspects after ingestion makes their retrieved bytes
 differ from the sealed bytes, so the hash lookup misses them -- honest false negatives reported,

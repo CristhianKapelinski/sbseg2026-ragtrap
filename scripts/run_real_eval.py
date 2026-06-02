@@ -2,9 +2,10 @@
 
 E1 compares, on the *identical* third-party suspect set (RAGOrigin released e5-retrieval feedback
 over PoisonedRAG's NQ attack), RAGtrap's constant-time signature lookup against the published
-RAGForensics LLM-judge baseline (run on a local GPU model). Detection metrics carry 95% Wilson
-CIs; latency carries a bootstrap CI; the baseline's per-incident cost is priced at the published
-API rate. A paraphrase-drift split exposes RAGtrap's honest false negatives.
+RAGForensics LLM-judge baseline (run on a local model, so there is no API billing). Detection
+metrics carry 95% Wilson CIs; latency carries a bootstrap CI; the cost signal is the model-call
+count and wall-clock, never a dollar figure. A paraphrase-drift split exposes RAGtrap's honest
+false negatives.
 
 Usage:
     python scripts/run_real_eval.py --feedback <path> --judge-model Qwen/Qwen2.5-3B-Instruct \
@@ -27,13 +28,6 @@ from ragtrap.realdata import (
     load_ragorigin_feedback,
 )
 from ragtrap.realeval import run_e1_baseline_judge, run_e1_ragtrap
-
-# Published OpenAI gpt-4o-mini rate the baseline repo defaults to (USD per 1M tokens), used only
-# to price the baseline's measured call count; RAGtrap's per-incident API cost is zero.
-GPT4O_MINI_USD_IN = 0.15 / 1_000_000
-GPT4O_MINI_USD_OUT = 0.60 / 1_000_000
-# RAGForensics judge prompt is ~350 input tokens; the explanation reply ~120 output tokens.
-USD_PER_JUDGE_CALL = 350 * GPT4O_MINI_USD_IN + 120 * GPT4O_MINI_USD_OUT
 
 
 def main() -> int:
@@ -85,7 +79,7 @@ def main() -> int:
         print(f"[{time.strftime('%H:%M:%S')}] running RAGForensics judge over top-{args.top_k} "
               f"suspects of {mq or len(fb)} questions ...", flush=True)
         bl = run_e1_baseline_judge(
-            fb, judge, top_k=args.top_k, max_questions=mq, usd_per_call=USD_PER_JUDGE_CALL
+            fb, judge, top_k=args.top_k, max_questions=mq
         )
         out["baseline"] = bl
         # head-to-head speedup on identical inputs
@@ -96,8 +90,7 @@ def main() -> int:
             "latency_speedup": bl["latency_s_total"] / rt_lat_total if rt_lat_total else None,
             "ragtrap_per_suspect_us": rt["drift_0"]["latency_s_per_suspect_us"],
             "baseline_per_suspect_s": bl["latency_s_per_suspect"],
-            "ragtrap_usd_cost": 0.0,
-            "baseline_usd_cost": bl["estimated_usd_cost"],
+            "ragtrap_model_calls": 0,
             "ragtrap_work_units": rt["drift_0"]["work_units"],
             "baseline_model_calls": bl["model_calls"],
         }

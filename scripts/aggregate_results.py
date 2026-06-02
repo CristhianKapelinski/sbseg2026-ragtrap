@@ -92,7 +92,6 @@ def main() -> int:
         m.append(f"\\newcommand{{\\RTlatTotal}}{{{_fmt(rt_ms,1)}}}")  # ms
         m.append(f"\\newcommand{{\\BLlatTotal}}{{{_fmt(head['baseline_latency_s_total'],0)}}}")
         m.append(f"\\newcommand{{\\BLperSus}}{{{_fmt(head['baseline_per_suspect_s'],1)}}}")
-        m.append(f"\\newcommand{{\\BLcost}}{{{head['baseline_usd_cost']*1000:.2f}}}")  # milli-USD
 
     # ---- scaling (E2/E4) ----
     pts = scaling.get("scale_points", [])
@@ -167,6 +166,7 @@ def main() -> int:
         m.append(f"\\newcommand{{\\AsrLo}}{{{_fmt(asr['ci_low']*100,0)}}}")
         m.append(f"\\newcommand{{\\AsrHi}}{{{_fmt(asr['ci_high']*100,0)}}}")
         m.append(f"\\newcommand{{\\AsrN}}{{{e5['n_questions']}}}")
+        m.append(f"\\newcommand{{\\AsrTopK}}{{{e5['top_k']}}}")
         m.append(f"\\newcommand{{\\AsrGen}}{{{e5['generation_model'].split('/')[-1]}}}")
 
     # ---- E0 ----
