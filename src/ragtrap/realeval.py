@@ -17,11 +17,13 @@ list:
   reading its principal. A suspect is flagged poisoned iff its principal is an attacker principal.
 * **RAGForensics (baseline)**: the published LLM-judge loop (one model call per context), run on a
   local GPU model over the same contexts; see :mod:`ragtrap.llm_judge`.
+* **RAGOrigin (baseline)**: the published responsibility-attribution scoring (proxy-LLM
+  answer/question loss plus retrieval score, z-normalized and K-means thresholded), run on a local
+  GPU proxy over the same contexts; see :func:`run_e1_baseline_ragorigin`.
 
-Adversarial drift split (honest false negatives). A configurable fraction of the *poisoned*
-suspects are paraphrased after ingestion so their retrieved bytes differ from the sealed bytes.
-A hash lookup cannot match a paraphrase, so these are genuine RAGtrap false negatives that we
-report rather than hide; precision stays exact because a hash match is exact.
+Drift split. A configurable fraction of the *poisoned* suspects are paraphrased after ingestion so
+their retrieved bytes differ from the sealed bytes. A hash lookup cannot match a paraphrase, so
+these are RAGtrap false negatives; precision stays exact because a hash match is exact.
 """
 
 from __future__ import annotations
@@ -221,6 +223,115 @@ def run_e1_ragtrap(
     }
 
 
+def run_e1_baseline_ragorigin(
+    feedback,
+    *,
+    proxy_model: str = "Qwen/Qwen2.5-3B-Instruct",
+    top_k: int = 10,
+    device: str = "cuda",
+    dtype: str = "float16",
+    max_questions: int | None = None,
+) -> dict[str, object]:
+    """RAGOrigin responsibility-attribution baseline over the identical top-k suspects.
+
+    Implements the published RAGOrigin scoring (``measure_responsibility`` + ``dynamic_threshold``
+    from the released code): for each suspect the proxy model computes an answer-generation loss
+    (loss of the RAG response given context+question) and a question-generation loss (loss of the
+    question given context); these, with the released retrieval score, are z-score normalized and
+    averaged (the default ``variant_0`` trace score). A per-question K-means (k=2) dynamic
+    threshold then flags the higher-score cluster as poisoned, exactly as the upstream
+    ``determine_threshold`` does. One proxy forward pass per (suspect, response) and per
+    (suspect, question) pair; the model runs locally, so the cost signal is the forward-pass count
+    and wall-clock, never a dollar figure.
+    """
+    import time as _time
+
+    import numpy as np
+    import torch
+    from sklearn.cluster import KMeans
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    tok = AutoTokenizer.from_pretrained(proxy_model)
+    model = AutoModelForCausalLM.from_pretrained(
+        proxy_model, dtype=getattr(torch, dtype), device_map=device
+    )
+    model.eval()
+
+    prompt_1 = (
+        "Below is a query from a user and a relevant context. Answer the question given the "
+        "information in the context. \n\nContext: {ctx} \n\nQuery: {q} \n\nAnswer:"
+    )
+    prompt_2 = (
+        "Below is a query from a user and a relevant context. Answer the question given the "
+        "information in the context. \n\nContext: {ctx} \n\nQuery:"
+    )
+
+    def _loss(context: str, response: str) -> float:
+        text = context + " " + response
+        inputs = tok(text, return_tensors="pt", truncation=True, max_length=1024)
+        input_ids = inputs["input_ids"].to(device)
+        ctx_ids = tok(context, return_tensors="pt", truncation=True, max_length=1024)["input_ids"]
+        labels = input_ids.clone()
+        labels[:, : ctx_ids.shape[1]] = -100
+        with torch.no_grad():
+            out = model(input_ids, labels=labels)
+        return float(out.loss.item())
+
+    conf = ConfusionCounts()
+    n_calls = 0
+    total_seconds = 0.0
+    n_q = 0
+    questions = feedback if max_questions is None else feedback[:max_questions]
+    for q in questions:
+        topk = sorted(q.contexts, key=lambda c: c.rank)[:top_k]
+        rag_resp = q.rag_response or q.target_answer
+        answer_scores: list[float] = []
+        question_scores: list[float] = []
+        retrieval_scores: list[float] = []
+        start = _time.perf_counter()
+        for ctx in topk:
+            answer_scores.append(_loss(prompt_1.format(ctx=ctx.text, q=q.question), rag_resp))
+            question_scores.append(_loss(prompt_2.format(ctx=ctx.text), q.question))
+            retrieval_scores.append(ctx.retrieval_score)
+            n_calls += 2
+        total_seconds += _time.perf_counter() - start
+
+        def _z(arr: np.ndarray) -> np.ndarray:
+            std = float(np.std(arr))
+            return np.zeros_like(arr) if std == 0 else (arr - float(np.mean(arr))) / std
+
+        a = _z(-np.array(answer_scores))
+        b = _z(-np.array(question_scores))
+        c = _z(np.array(retrieval_scores))
+        trace = [(x + y + z) / 3 for x, y, z in zip(a, b, c, strict=False)]
+        scores = np.array(trace).reshape(-1, 1)
+        if len({round(float(s), 9) for s in trace}) < 2:
+            preds = [False] * len(trace)
+        else:
+            km = KMeans(n_clusters=2, random_state=42, n_init=10).fit(scores)
+            hi = int(np.argmax(km.cluster_centers_.flatten()))
+            preds = [lab == hi for lab in km.labels_]
+        for ctx, predicted_poison in zip(topk, preds, strict=False):
+            conf.add(bool(predicted_poison), ctx.is_poison)
+        n_q += 1
+
+    n_suspects = sum(
+        len(sorted(q.contexts, key=lambda c: c.rank)[:top_k]) for q in questions
+    )
+    return {
+        "method": "ragorigin_responsibility",
+        "proxy_model": proxy_model,
+        "n_questions": n_q,
+        "top_k": top_k,
+        "n_suspects": n_suspects,
+        "detection": conf.metrics(),
+        "work_units": n_calls,
+        "model_calls": n_calls,
+        "latency_s_total": total_seconds,
+        "latency_s_per_suspect": total_seconds / n_suspects if n_suspects else 0.0,
+    }
+
+
 def run_e1_baseline_judge(
     feedback,
     judge: LocalLLMJudge,
@@ -231,8 +342,7 @@ def run_e1_baseline_judge(
     """RAGForensics LLM-judge baseline over the identical top-k suspects.
 
     One local-model call per context. Returns the same detection metrics plus measured wall-clock
-    and the model-call count. The judge runs locally, so there is no API billing; the honest cost
-    signal is the model-call count and the wall-clock latency, never a dollar figure.
+    and the model-call count.
     """
     conf = ConfusionCounts()
     total_calls = 0

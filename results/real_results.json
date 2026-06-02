@@ -248,5 +248,52 @@
     "ragtrap_model_calls": 0,
     "ragtrap_work_units": 1000,
     "baseline_model_calls": 1000
+  },
+  "baseline_ragorigin": {
+    "method": "ragorigin_responsibility",
+    "proxy_model": "Qwen/Qwen2.5-3B-Instruct",
+    "n_questions": 100,
+    "top_k": 10,
+    "n_suspects": 1000,
+    "detection": {
+      "tp": 500,
+      "fp": 6,
+      "tn": 494,
+      "fn": 0,
+      "n_positives": 500,
+      "n_negatives": 500,
+      "recall": {
+        "k": 500,
+        "n": 500,
+        "point": 1.0,
+        "ci_low": 0.9923753814690964,
+        "ci_high": 0.9999999999999999
+      },
+      "precision": {
+        "k": 500,
+        "n": 506,
+        "point": 0.9881422924901185,
+        "ci_low": 0.9743738289636625,
+        "ci_high": 0.9945545597751142
+      },
+      "fpr": {
+        "k": 6,
+        "n": 500,
+        "point": 0.012,
+        "ci_low": 0.0055109199671753584,
+        "ci_high": 0.025930707718986326
+      },
+      "fnr": {
+        "k": 0,
+        "n": 500,
+        "point": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.007624618530903363
+      }
+    },
+    "work_units": 2000,
+    "model_calls": 2000,
+    "latency_s_total": 64.45515295024961,
+    "latency_s_per_suspect": 0.06445515295024962
   }
 }

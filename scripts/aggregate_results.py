@@ -40,9 +40,10 @@ def main() -> int:
     m.append("% ===== AUTO-GENERATED RESULTS MACROS (scripts/aggregate_results.py) =====")
     m.append("% Every empirical number in the paper body is defined here, from results/*.json.")
 
-    # ---- E1 headline (top-k detection + latency + cost) ----
+    # ---- E1 headline (top-k detection + latency) ----
     rt = real.get("ragtrap", {})
     bl = real.get("baseline", {})
+    ro = real.get("baseline_ragorigin", {})
     head = real.get("headline", {})
     topk = real.get("top_k", 10)
     m.append(f"\\newcommand{{\\TopK}}{{{topk}}}")
@@ -86,12 +87,32 @@ def main() -> int:
         m.append(f"\\newcommand{{\\BLcalls}}{{{bl['model_calls']}}}")
         m.append(f"\\newcommand{{\\BLjudge}}{{{bl['judge_model'].split('/')[-1]}}}")
 
+    # RAGOrigin responsibility-attribution baseline (identical suspects)
+    rodet = ro.get("detection", {})
+    if rodet:
+        rrec, rprec, rfpr = rodet["recall"], rodet["precision"], rodet["fpr"]
+        m.append(f"\\newcommand{{\\ROrecall}}{{{_fmt(rrec['point'],2)}}}")
+        m.append(f"\\newcommand{{\\ROrecallLo}}{{{_fmt(rrec['ci_low'],2)}}}")
+        m.append(f"\\newcommand{{\\ROrecallHi}}{{{_fmt(rrec['ci_high'],2)}}}")
+        m.append(f"\\newcommand{{\\ROprecision}}{{{_fmt(rprec['point'],2)}}}")
+        m.append(f"\\newcommand{{\\ROprecisionLo}}{{{_fmt(rprec['ci_low'],2)}}}")
+        m.append(f"\\newcommand{{\\ROprecisionHi}}{{{_fmt(rprec['ci_high'],2)}}}")
+        m.append(f"\\newcommand{{\\ROfpr}}{{{_fmt(rfpr['point'],2)}}}")
+        m.append(f"\\newcommand{{\\ROfnr}}{{{_fmt(rodet['fnr']['point'],2)}}}")
+        m.append(f"\\newcommand{{\\ROcalls}}{{{ro['model_calls']}}}")
+        m.append(f"\\newcommand{{\\ROproxy}}{{{ro['proxy_model'].split('/')[-1]}}}")
+        m.append(f"\\newcommand{{\\ROlatTotal}}{{{_fmt(ro['latency_s_total'],0)}}}")
+        m.append(f"\\newcommand{{\\ROperSus}}{{{_fmt(ro['latency_s_per_suspect']*1000,1)}}}")  # ms
+
     if head:
         rt_ms = head["ragtrap_latency_s_total"] * 1000
         m.append(f"\\newcommand{{\\LatSpeedup}}{{{_fmt(head['latency_speedup'],0)}}}")
         m.append(f"\\newcommand{{\\RTlatTotal}}{{{_fmt(rt_ms,1)}}}")  # ms
         m.append(f"\\newcommand{{\\BLlatTotal}}{{{_fmt(head['baseline_latency_s_total'],0)}}}")
         m.append(f"\\newcommand{{\\BLperSus}}{{{_fmt(head['baseline_per_suspect_s'],1)}}}")
+        if ro.get("latency_s_total"):
+            ro_speedup = ro["latency_s_total"] / head["ragtrap_latency_s_total"]
+            m.append(f"\\newcommand{{\\LatSpeedupRO}}{{{_fmt(ro_speedup,0)}}}")
 
     # ---- scaling (E2/E4) ----
     pts = scaling.get("scale_points", [])
