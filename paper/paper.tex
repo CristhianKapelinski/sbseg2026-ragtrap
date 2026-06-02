@@ -74,7 +74,7 @@ external document corpus. That corpus is ingested from untrusted sources with no
 trust check at admission, so an attacker can poison the answers cheaply. When a
 source is later found compromised, the operator faces an unsolved problem: how to
 purge that source cleanly, without rescanning the corpus or deleting benign
-content. \sysname{} solves this by recording signed provenance for each chunk at
+content. \sysname{} addresses this by recording signed provenance for each chunk at
 ingestion. Revocation then removes exactly the compromised source's chunks, at a
 false-purge rate of \textbf{\PerChunkFP{}} against \textbf{\PerDocFP{}} for
 document-level purging, and traceback becomes one content-hash lookup. On the
@@ -186,7 +186,7 @@ end-to-end harness.
 We position \sysname{} against five lines of work, summarized in
 Table~\ref{tab:related}. \textbf{Detection and query-time filtering.} GMTP
 filters poisoned documents by masking high-impact tokens and checking their
-probability under a masked language model, eliminating over 90\% of poisoned
+probability under a masked language model, filtering over 90\% of poisoned
 content at retrieval~\cite{gmtp}; RevPRAG detects poisoned responses at inference
 time from LLM activations~\cite{revprag}; RAGPart and RAGMask are retrieval-stage
 defenses that partition or flag retrieved content~\cite{ragpartmask}. These
@@ -304,6 +304,10 @@ chunk ids, so revoking a source enumerates exactly its chunks without scanning
 the corpus. The signed message binds both the verdicts and the content hash. A
 record therefore cannot be replayed for different content or verdicts without
 invalidating the signature, and any holder of the public key can verify it.
+The prototype is implemented in Python using the \texttt{cryptography} library
+for Ed25519 and SHA-256, and is organized as four components: an ingestion gate,
+a signer, a content-hash index for traceback, and a principal index for
+revocation.
 
 \begin{figure}[htbp]
 \centering
@@ -318,7 +322,7 @@ invalidating the signature, and any holder of the public key can verify it.
   \node[store,right=of gate] (ds) {Vector store\\+ records\\+ hash index\\+ principal index};
   \node[box,above=7mm of ds] (q) {RAG query\\(unchanged)};
   \node[box,below=8mm of gate] (tb) {Traceback:\\O(1) hash lookup};
-  \node[box,below=8mm of ds] (rev) {\texttt{revoke-source}:\\batch purge};
+  \node[box,below=8mm of ds] (rev) {Revocation:\\batch purge};
   \draw[->] (src) -- (gate);
   \draw[->] (gate) -- (ds);
   \draw[<->] (q) -- (ds);
@@ -341,13 +345,6 @@ trusted and holds the private key; ingestion is where provenance is sealed.
 Detection at ingestion is best-effort and may have false negatives, so
 \sysname{}'s value is forensic and operational; query-time
 defenses~\cite{gmtp,ragpartmask} are a complementary layer.
-
-\textbf{Reproducibility.} Behaviour is configured entirely by environment
-variables (prefix \texttt{RAGTRAP\_}); nothing is hardcoded. Every run logs the
-resolved configuration, each input with its content hash, every step, and all
-outputs to a timestamped file. A manifest pins each third-party input by SHA-256
-(Table~\ref{tab:data}) alongside model identities. The private key is generated
-per run and never written to disk.
 
 \section{Evaluation}\label{sec:eval}
 
@@ -396,17 +393,27 @@ Exp. & Tests & Dataset & Parameters & Metric \\
 \midrule
 E1 & Gate, signature, revocation index & Labelled corpus & \EZeroChunks{} chunks, 1 attacker principal & Verify, tamper-reject, collateral \\
 E3 & Per-chunk vs.\ doc-level purge; revocation cost & BEIR \texttt{nq} + PoisonedRAG & up to \FullPassages{} passages, \EThreeDocs{} mixed docs & False-purge rate, MTTR, sign latency \\
-E2 & Attribution vs.\ 2 baselines; drift robustness & RAGOrigin feedback over NQ & \Nquestions{} questions, top-\TopK{}, drift $p\in\{0,.3,.5\}$ & Cost (latency, calls); recall \\
+E2 & Attribution vs.\ 2 baselines; drift sensitivity & RAGOrigin feedback over NQ & \Nquestions{} questions, top-\TopK{}, drift $p\in\{0,.3,.5\}$ & Cost (latency, calls); recall \\
 E4 & Suspects are harmful & RAGOrigin feedback over NQ & \Nquestions{} questions, top-\AsrTopK{} & Attack success \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{E1: Instrument validation.} On a labelled corpus of \EZeroChunks{}
-chunks, all signed records verify, a tampered message is rejected, and revocation
-purges exactly the targeted principal's \EZeroPurged{} chunks with no collateral
-removal. This confirms the gate, signature verification, and the revocation
-index behave as specified before any comparison.
+\textbf{E1: Instrument validation.} E1 checks that the gate, signature
+verification, and the revocation index behave as specified before any real-data
+comparison. The corpus is a seeded, labelled synthetic set of \EZeroChunks{}
+chunks across five principals, one designated the attacker; ten percent of the
+chunks (\EZeroPurged{}) carry adversarial text and are attributed only to that
+attacker principal, so the principal's expected purge set is known by
+construction. Each chunk is ingested through the gate and signed. We then run
+three checks. First, we verify every stored record against the public key, and
+verify that the recorded signature rejects a substituted message, which tests
+tamper detection. Second, we revoke the attacker principal and compare the
+purged chunk-id set against the known set of that principal's chunks; collateral
+removal is any purged chunk outside that set. On this corpus all records verify,
+the tampered message is rejected, and revocation purges exactly the targeted
+principal's \EZeroPurged{} chunks with zero collateral. These are deterministic
+correctness properties of the design, not detection rates.
 
 \textbf{E2: Forensic-time attribution on the real attack.} The clean substrate is
 the BEIR~\cite{beir} Natural Questions corpus~\cite{naturalquestions}. The attack
@@ -527,7 +534,7 @@ chunks and removes them cleanly. It does not detect or prevent poisoning. It
 relies on an external detector or a human analyst to flag the source in the first
 place. The ingestion detectors are best-effort and out of scope, and query-time
 defenses~\cite{gmtp,ragpartmask} remain a complementary layer. Attribution rests
-on an exact content-hash match, so it is not robust to a content-mutating
+on an exact content-hash match, so it does not hold against a content-mutating
 adversary. Any post-ingestion paraphrase or split-view
 mutation~\cite{carlini} of a chunk's bytes evades the hash. This drops recall to
 \RTrecallDriftThree{} at 30\% drift and \RTrecallDriftFive{} at 50\%
@@ -559,7 +566,7 @@ document-level purging discards \PerDocFP{} of what it removes. It also turns
 traceback into a content-hash lookup that costs no model calls. The recovery is
 cheap because the index does the work, but the value is the clean excision, not
 the speed. The limit is equally concrete. The exact-hash basis means \sysname{}
-is not robust to a content-mutating adversary, with recall falling to
+does not hold against a content-mutating adversary, with recall falling to
 \RTrecallDriftThree{} under 30\% post-ingestion drift, and it presupposes an
 external detector or analyst to flag the source. Pairing this recovery layer with
 near-duplicate matching is the natural next step. We release \sysname{} as a
