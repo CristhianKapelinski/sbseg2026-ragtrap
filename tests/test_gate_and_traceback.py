@@ -1,11 +1,11 @@
-"""Tests for chunking, ingestion, O(1) traceback, and the iterative baseline."""
+"""Tests for chunking, ingestion, constant-time traceback, and granularity."""
 
 from __future__ import annotations
 
 from ragtrap.gate import chunk_text, ingest, ingest_per_document, verify_record
 from ragtrap.records import Chunk
 from ragtrap.signing import Ed25519Signer
-from ragtrap.traceback import iterative_baseline_traceback, ragtrap_traceback
+from ragtrap.traceback import ragtrap_traceback
 
 
 def _corpus() -> list[Chunk]:
@@ -79,14 +79,6 @@ def test_ragtrap_traceback_detects_tamper() -> None:
     store.records[suspect.chunk_id] = type(rec)(**corrupted)
     result = ragtrap_traceback([suspect], store, signer)
     assert suspect.chunk_id in result.verification_failures
-
-
-def test_baseline_work_scales_with_corpus() -> None:
-    corpus = _corpus()
-    suspects = [c for c in corpus if c.principal == "attacker"]
-    result = iterative_baseline_traceback(suspects, corpus, top_k=5)
-    # Each suspect compares against every corpus chunk: |suspects| * |corpus| comparisons.
-    assert result.work_units == len(suspects) * len(corpus)
 
 
 def test_per_document_ingest_uses_document_hash() -> None:

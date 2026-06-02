@@ -1,0 +1,33 @@
+{
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.17.0-29-generic-x86_64-with-glibc2.39",
+    "processor": "x86_64"
+  },
+  "config": {
+    "repo_root": "/home/kapelinski/sbseg-neutro/papers/ragtrap",
+    "data_dir": "/home/kapelinski/sbseg-neutro/papers/ragtrap/data",
+    "logs_dir": "/home/kapelinski/sbseg-neutro/papers/ragtrap/logs",
+    "results_dir": "/home/kapelinski/sbseg-neutro/papers/ragtrap/results",
+    "signer": "ed25519",
+    "chunk_chars": 512,
+    "chunk_overlap": 64,
+    "beir_dataset": "nq",
+    "beir_passage_cap": 5000,
+    "hf_revision": "main",
+    "seed": 1337
+  },
+  "E0": {
+    "experiment": "E0",
+    "data": "synthetic (labelled)",
+    "n_chunks": 200,
+    "all_records_verify": true,
+    "tamper_detected": true,
+    "traceback_recall": 1.0,
+    "revoked_principal": "attacker-0",
+    "chunks_purged": 20,
+    "purged_exactly_target": true,
+    "no_collateral_purge": true,
+    "instrument_valid": true
+  }
+}

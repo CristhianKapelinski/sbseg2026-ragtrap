@@ -1,0 +1,255 @@
+{
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.17.0-29-generic-x86_64-with-glibc2.39"
+  },
+  "data": {
+    "feedback_file": "/mnt/win_ssd/sbseg-work/ragtrap/repos/RAG-Responsibility-Attribution/attack_feedback/PRAGB/k5_m5_e5_gpt-4o-mini.json",
+    "feedback_sha256": "658419c9411ee68571c15174e6ceaed3ea24f9912bef8ed5a805a44638fde3b6",
+    "feedback_sha256_pinned": "658419c9411ee68571c15174e6ceaed3ea24f9912bef8ed5a805a44638fde3b6",
+    "source": "RAGOrigin released attack feedback (PRAGB, e5 retriever, gpt-4o-mini, k5_m5)",
+    "n_questions": 100,
+    "retriever": "intfloat/e5 (third-party, as released)",
+    "attack": "PoisonedRAG (Zou et al., USENIX Security 2025)"
+  },
+  "top_k": 10,
+  "ragtrap": {
+    "drift_0": {
+      "method": "ragtrap",
+      "n_questions": 100,
+      "top_k": 10,
+      "n_suspects": 1000,
+      "n_poison_suspects": 500,
+      "n_clean_suspects": 500,
+      "drift_fraction": 0.0,
+      "n_drifted": 0,
+      "detection": {
+        "tp": 500,
+        "fp": 0,
+        "tn": 500,
+        "fn": 0,
+        "n_positives": 500,
+        "n_negatives": 500,
+        "recall": {
+          "k": 500,
+          "n": 500,
+          "point": 1.0,
+          "ci_low": 0.9923753814690964,
+          "ci_high": 0.9999999999999999
+        },
+        "precision": {
+          "k": 500,
+          "n": 500,
+          "point": 1.0,
+          "ci_low": 0.9923753814690964,
+          "ci_high": 0.9999999999999999
+        },
+        "fpr": {
+          "k": 0,
+          "n": 500,
+          "point": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.007624618530903363
+        },
+        "fnr": {
+          "k": 0,
+          "n": 500,
+          "point": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.007624618530903363
+        }
+      },
+      "attribution_recall": {
+        "k": 500,
+        "n": 500,
+        "point": 1.0,
+        "ci_low": 0.9923753814690964,
+        "ci_high": 0.9999999999999999
+      },
+      "work_units": 1000,
+      "latency_s_min": 0.1016553919762373,
+      "latency_s_mean": 0.11851600980153307,
+      "latency_s_per_suspect_us": 101.6553919762373,
+      "repeats": 20
+    },
+    "drift_0.3": {
+      "method": "ragtrap",
+      "n_questions": 100,
+      "top_k": 10,
+      "n_suspects": 1000,
+      "n_poison_suspects": 500,
+      "n_clean_suspects": 500,
+      "drift_fraction": 0.3,
+      "n_drifted": 149,
+      "detection": {
+        "tp": 351,
+        "fp": 0,
+        "tn": 500,
+        "fn": 149,
+        "n_positives": 500,
+        "n_negatives": 500,
+        "recall": {
+          "k": 351,
+          "n": 500,
+          "point": 0.702,
+          "ci_low": 0.6604921922645164,
+          "ci_high": 0.7404274618489985
+        },
+        "precision": {
+          "k": 351,
+          "n": 351,
+          "point": 1.0,
+          "ci_low": 0.9891737609119111,
+          "ci_high": 1.0
+        },
+        "fpr": {
+          "k": 0,
+          "n": 500,
+          "point": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.007624618530903363
+        },
+        "fnr": {
+          "k": 149,
+          "n": 500,
+          "point": 0.298,
+          "ci_low": 0.25957253815100145,
+          "ci_high": 0.3395078077354835
+        }
+      },
+      "attribution_recall": {
+        "k": 351,
+        "n": 500,
+        "point": 0.702,
+        "ci_low": 0.6604921922645164,
+        "ci_high": 0.7404274618489985
+      },
+      "work_units": 1000,
+      "latency_s_min": 0.08450167602859437,
+      "latency_s_mean": 0.09898857466760091,
+      "latency_s_per_suspect_us": 84.50167602859437,
+      "repeats": 20
+    },
+    "drift_0.5": {
+      "method": "ragtrap",
+      "n_questions": 100,
+      "top_k": 10,
+      "n_suspects": 1000,
+      "n_poison_suspects": 500,
+      "n_clean_suspects": 500,
+      "drift_fraction": 0.5,
+      "n_drifted": 246,
+      "detection": {
+        "tp": 254,
+        "fp": 0,
+        "tn": 500,
+        "fn": 246,
+        "n_positives": 500,
+        "n_negatives": 500,
+        "recall": {
+          "k": 254,
+          "n": 500,
+          "point": 0.508,
+          "ci_low": 0.4642850183794739,
+          "ci_high": 0.5515929877240316
+        },
+        "precision": {
+          "k": 254,
+          "n": 254,
+          "point": 1.0,
+          "ci_low": 0.9851009301834924,
+          "ci_high": 0.9999999999999999
+        },
+        "fpr": {
+          "k": 0,
+          "n": 500,
+          "point": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.007624618530903363
+        },
+        "fnr": {
+          "k": 246,
+          "n": 500,
+          "point": 0.492,
+          "ci_low": 0.44840701227596835,
+          "ci_high": 0.5357149816205261
+        }
+      },
+      "attribution_recall": {
+        "k": 254,
+        "n": 500,
+        "point": 0.508,
+        "ci_low": 0.4642850183794739,
+        "ci_high": 0.5515929877240316
+      },
+      "work_units": 1000,
+      "latency_s_min": 0.07419609895441681,
+      "latency_s_mean": 0.08801022573024966,
+      "latency_s_per_suspect_us": 74.19609895441681,
+      "repeats": 20
+    },
+    "latency_note": {
+      "per_suspect_us_min": 101.6553919762373
+    }
+  },
+  "baseline": {
+    "method": "ragforensics_llm_judge",
+    "judge_model": "Qwen/Qwen2.5-3B-Instruct",
+    "n_questions": 100,
+    "top_k": 10,
+    "n_suspects": 1000,
+    "detection": {
+      "tp": 478,
+      "fp": 64,
+      "tn": 436,
+      "fn": 22,
+      "n_positives": 500,
+      "n_negatives": 500,
+      "recall": {
+        "k": 478,
+        "n": 500,
+        "point": 0.956,
+        "ci_low": 0.9342800855801577,
+        "ci_high": 0.9707662623196583
+      },
+      "precision": {
+        "k": 478,
+        "n": 542,
+        "point": 0.8819188191881919,
+        "ci_low": 0.8520253478671957,
+        "ci_high": 0.9064364476427105
+      },
+      "fpr": {
+        "k": 64,
+        "n": 500,
+        "point": 0.128,
+        "ci_low": 0.10152638796079462,
+        "ci_high": 0.1601463282261975
+      },
+      "fnr": {
+        "k": 22,
+        "n": 500,
+        "point": 0.044,
+        "ci_low": 0.029233737680341678,
+        "ci_high": 0.06571991441984218
+      }
+    },
+    "work_units": 1000,
+    "model_calls": 1000,
+    "latency_s_total": 1654.3539324670564,
+    "latency_s_per_suspect": 1.6543539324670564,
+    "usd_per_call": 0.0001245,
+    "estimated_usd_cost": 0.12449999999999999
+  },
+  "headline": {
+    "ragtrap_latency_s_total": 0.1016553919762373,
+    "baseline_latency_s_total": 1654.3539324670564,
+    "latency_speedup": 16274.138541060114,
+    "ragtrap_per_suspect_us": 101.6553919762373,
+    "baseline_per_suspect_s": 1.6543539324670564,
+    "ragtrap_usd_cost": 0.0,
+    "baseline_usd_cost": 0.12449999999999999,
+    "ragtrap_work_units": 1000,
+    "baseline_model_calls": 1000
+  }
+}

@@ -1,0 +1,422 @@
+{
+  "E1_real": {
+    "environment": {
+      "python": "3.12.3",
+      "platform": "Linux-6.17.0-29-generic-x86_64-with-glibc2.39"
+    },
+    "data": {
+      "feedback_file": "/mnt/win_ssd/sbseg-work/ragtrap/repos/RAG-Responsibility-Attribution/attack_feedback/PRAGB/k5_m5_e5_gpt-4o-mini.json",
+      "feedback_sha256": "658419c9411ee68571c15174e6ceaed3ea24f9912bef8ed5a805a44638fde3b6",
+      "feedback_sha256_pinned": "658419c9411ee68571c15174e6ceaed3ea24f9912bef8ed5a805a44638fde3b6",
+      "source": "RAGOrigin released attack feedback (PRAGB, e5 retriever, gpt-4o-mini, k5_m5)",
+      "n_questions": 100,
+      "retriever": "intfloat/e5 (third-party, as released)",
+      "attack": "PoisonedRAG (Zou et al., USENIX Security 2025)"
+    },
+    "top_k": 10,
+    "ragtrap": {
+      "drift_0": {
+        "method": "ragtrap",
+        "n_questions": 100,
+        "top_k": 10,
+        "n_suspects": 1000,
+        "n_poison_suspects": 500,
+        "n_clean_suspects": 500,
+        "drift_fraction": 0.0,
+        "n_drifted": 0,
+        "detection": {
+          "tp": 500,
+          "fp": 0,
+          "tn": 500,
+          "fn": 0,
+          "n_positives": 500,
+          "n_negatives": 500,
+          "recall": {
+            "k": 500,
+            "n": 500,
+            "point": 1.0,
+            "ci_low": 0.9923753814690964,
+            "ci_high": 0.9999999999999999
+          },
+          "precision": {
+            "k": 500,
+            "n": 500,
+            "point": 1.0,
+            "ci_low": 0.9923753814690964,
+            "ci_high": 0.9999999999999999
+          },
+          "fpr": {
+            "k": 0,
+            "n": 500,
+            "point": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.007624618530903363
+          },
+          "fnr": {
+            "k": 0,
+            "n": 500,
+            "point": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.007624618530903363
+          }
+        },
+        "attribution_recall": {
+          "k": 500,
+          "n": 500,
+          "point": 1.0,
+          "ci_low": 0.9923753814690964,
+          "ci_high": 0.9999999999999999
+        },
+        "work_units": 1000,
+        "latency_s_min": 0.1016553919762373,
+        "latency_s_mean": 0.11851600980153307,
+        "latency_s_per_suspect_us": 101.6553919762373,
+        "repeats": 20
+      },
+      "drift_0.3": {
+        "method": "ragtrap",
+        "n_questions": 100,
+        "top_k": 10,
+        "n_suspects": 1000,
+        "n_poison_suspects": 500,
+        "n_clean_suspects": 500,
+        "drift_fraction": 0.3,
+        "n_drifted": 149,
+        "detection": {
+          "tp": 351,
+          "fp": 0,
+          "tn": 500,
+          "fn": 149,
+          "n_positives": 500,
+          "n_negatives": 500,
+          "recall": {
+            "k": 351,
+            "n": 500,
+            "point": 0.702,
+            "ci_low": 0.6604921922645164,
+            "ci_high": 0.7404274618489985
+          },
+          "precision": {
+            "k": 351,
+            "n": 351,
+            "point": 1.0,
+            "ci_low": 0.9891737609119111,
+            "ci_high": 1.0
+          },
+          "fpr": {
+            "k": 0,
+            "n": 500,
+            "point": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.007624618530903363
+          },
+          "fnr": {
+            "k": 149,
+            "n": 500,
+            "point": 0.298,
+            "ci_low": 0.25957253815100145,
+            "ci_high": 0.3395078077354835
+          }
+        },
+        "attribution_recall": {
+          "k": 351,
+          "n": 500,
+          "point": 0.702,
+          "ci_low": 0.6604921922645164,
+          "ci_high": 0.7404274618489985
+        },
+        "work_units": 1000,
+        "latency_s_min": 0.08450167602859437,
+        "latency_s_mean": 0.09898857466760091,
+        "latency_s_per_suspect_us": 84.50167602859437,
+        "repeats": 20
+      },
+      "drift_0.5": {
+        "method": "ragtrap",
+        "n_questions": 100,
+        "top_k": 10,
+        "n_suspects": 1000,
+        "n_poison_suspects": 500,
+        "n_clean_suspects": 500,
+        "drift_fraction": 0.5,
+        "n_drifted": 246,
+        "detection": {
+          "tp": 254,
+          "fp": 0,
+          "tn": 500,
+          "fn": 246,
+          "n_positives": 500,
+          "n_negatives": 500,
+          "recall": {
+            "k": 254,
+            "n": 500,
+            "point": 0.508,
+            "ci_low": 0.4642850183794739,
+            "ci_high": 0.5515929877240316
+          },
+          "precision": {
+            "k": 254,
+            "n": 254,
+            "point": 1.0,
+            "ci_low": 0.9851009301834924,
+            "ci_high": 0.9999999999999999
+          },
+          "fpr": {
+            "k": 0,
+            "n": 500,
+            "point": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.007624618530903363
+          },
+          "fnr": {
+            "k": 246,
+            "n": 500,
+            "point": 0.492,
+            "ci_low": 0.44840701227596835,
+            "ci_high": 0.5357149816205261
+          }
+        },
+        "attribution_recall": {
+          "k": 254,
+          "n": 500,
+          "point": 0.508,
+          "ci_low": 0.4642850183794739,
+          "ci_high": 0.5515929877240316
+        },
+        "work_units": 1000,
+        "latency_s_min": 0.07419609895441681,
+        "latency_s_mean": 0.08801022573024966,
+        "latency_s_per_suspect_us": 74.19609895441681,
+        "repeats": 20
+      },
+      "latency_note": {
+        "per_suspect_us_min": 101.6553919762373
+      }
+    },
+    "baseline": {
+      "method": "ragforensics_llm_judge",
+      "judge_model": "Qwen/Qwen2.5-3B-Instruct",
+      "n_questions": 100,
+      "top_k": 10,
+      "n_suspects": 1000,
+      "detection": {
+        "tp": 478,
+        "fp": 64,
+        "tn": 436,
+        "fn": 22,
+        "n_positives": 500,
+        "n_negatives": 500,
+        "recall": {
+          "k": 478,
+          "n": 500,
+          "point": 0.956,
+          "ci_low": 0.9342800855801577,
+          "ci_high": 0.9707662623196583
+        },
+        "precision": {
+          "k": 478,
+          "n": 542,
+          "point": 0.8819188191881919,
+          "ci_low": 0.8520253478671957,
+          "ci_high": 0.9064364476427105
+        },
+        "fpr": {
+          "k": 64,
+          "n": 500,
+          "point": 0.128,
+          "ci_low": 0.10152638796079462,
+          "ci_high": 0.1601463282261975
+        },
+        "fnr": {
+          "k": 22,
+          "n": 500,
+          "point": 0.044,
+          "ci_low": 0.029233737680341678,
+          "ci_high": 0.06571991441984218
+        }
+      },
+      "work_units": 1000,
+      "model_calls": 1000,
+      "latency_s_total": 1654.3539324670564,
+      "latency_s_per_suspect": 1.6543539324670564,
+      "usd_per_call": 0.0001245,
+      "estimated_usd_cost": 0.12449999999999999
+    },
+    "headline": {
+      "ragtrap_latency_s_total": 0.1016553919762373,
+      "baseline_latency_s_total": 1654.3539324670564,
+      "latency_speedup": 16274.138541060114,
+      "ragtrap_per_suspect_us": 101.6553919762373,
+      "baseline_per_suspect_s": 1.6543539324670564,
+      "ragtrap_usd_cost": 0.0,
+      "baseline_usd_cost": 0.12449999999999999,
+      "ragtrap_work_units": 1000,
+      "baseline_model_calls": 1000
+    }
+  },
+  "scaling": {
+    "data": {
+      "corpus": "BEIR/nq (real, 2,681,468 passages)",
+      "parquet": "/mnt/win_ssd/sbseg-work/ragtrap/hf/hub/datasets--BeIR--nq/snapshots/b7253e6c379163d024ddb1d6948152a91a2e3b46/corpus/corpus-00000-of-00001.parquet",
+      "poison": "PoisonedRAG nq.json released adversarial passages",
+      "poison_sha256_pinned": "44df711454a9bada08e72e9e4a003a2cc845c43707ac93a3493e5168ec415cf2",
+      "n_poison_chunks": 500,
+      "revoke_principal": "poisonedrag-attacker-0"
+    },
+    "sizes": [
+      10000,
+      100000,
+      1000000,
+      2681468
+    ],
+    "scale_points": [
+      {
+        "n_clean_passages": 10000,
+        "n_chunks": 17748,
+        "n_poison_chunks": 500,
+        "sign_latency_us": 86.86778915582985,
+        "throughput_per_s": 11511.746870938849,
+        "mean_record_bytes": 569.9160468785216,
+        "revoke_mttr_s": 4.135898780077696e-05,
+        "manual_mttr_s": 0.0018082309979945421,
+        "mttr_ratio": 43.72038809809976,
+        "revoked_chunks": 100,
+        "passage_prefix_sha256": "4bb0e1469b337f96af03628881a1abd5f83e3e9476e460b66fd9f301107a7ab4"
+      },
+      {
+        "n_clean_passages": 100000,
+        "n_chunks": 171989,
+        "n_poison_chunks": 500,
+        "sign_latency_us": 85.99361071937419,
+        "throughput_per_s": 11628.770924194976,
+        "mean_record_bytes": 571.4060085238009,
+        "revoke_mttr_s": 5.1959999836981297e-05,
+        "manual_mttr_s": 0.03255856200121343,
+        "mttr_ratio": 626.6082006035853,
+        "revoked_chunks": 100,
+        "passage_prefix_sha256": "701c5fb756ee2f758c9b9b17fd912c8f7bb3e0104e5ae639bcb766900fe96164"
+      },
+      {
+        "n_clean_passages": 1000000,
+        "n_chunks": 1662710,
+        "n_poison_chunks": 500,
+        "sign_latency_us": 89.55473588359666,
+        "throughput_per_s": 11166.35530364135,
+        "mean_record_bytes": 573.3512193948434,
+        "revoke_mttr_s": 4.814297426491976e-05,
+        "manual_mttr_s": 0.33588354801759124,
+        "mttr_ratio": 6976.792629580819,
+        "revoked_chunks": 100,
+        "passage_prefix_sha256": "f83e3482c9fbc37931014b9106e5217f5ee3c4f308c4eda156870c2192047e63"
+      },
+      {
+        "n_clean_passages": 2681468,
+        "n_chunks": 4364162,
+        "n_poison_chunks": 500,
+        "sign_latency_us": 69.19081735945875,
+        "throughput_per_s": 14452.784894920664,
+        "mean_record_bytes": 574.7279326477798,
+        "revoke_mttr_s": 4.618801176548004e-05,
+        "manual_mttr_s": 0.7820275410776958,
+        "mttr_ratio": 16931.39650713796,
+        "revoked_chunks": 100,
+        "passage_prefix_sha256": "67671166a701f3b881def4eb25c948d0fd8b425128cfa1cc29806f2ab4669990"
+      }
+    ],
+    "signing_backends": {
+      "n_clean_passages": 100000,
+      "n_chunks": 171489,
+      "ed25519": {
+        "signer": "ed25519",
+        "n_chunks": 171489,
+        "total_seconds": 10.877402713056654,
+        "throughput_chunks_per_s": 15765.620205837718,
+        "mean_sign_latency_us": 63.42915704830428,
+        "mean_record_bytes": 571.3532937972698,
+        "mean_signature_bytes": 64.0
+      },
+      "hmac": {
+        "signer": "hmac",
+        "n_chunks": 171489,
+        "total_seconds": 5.663624729961157,
+        "throughput_chunks_per_s": 30279.01885744752,
+        "mean_sign_latency_us": 33.02616920013037,
+        "mean_record_bytes": 453.35329379726977,
+        "mean_signature_bytes": 32.0
+      },
+      "ed25519_over_hmac_time": 1.920572642377606
+    }
+  },
+  "aux": {
+    "E0": {
+      "experiment": "E0",
+      "data": "synthetic (labelled)",
+      "n_chunks": 200,
+      "all_records_verify": true,
+      "tamper_detected": true,
+      "traceback_recall": 1.0,
+      "revoked_principal": "attacker-0",
+      "chunks_purged": 20,
+      "purged_exactly_target": true,
+      "no_collateral_purge": true,
+      "instrument_valid": true
+    },
+    "E3": {
+      "experiment": "E3_granularity",
+      "data": "real BEIR nq passages + injected real PoisonedRAG passages (one principal/doc)",
+      "n_documents": 230,
+      "poison_per_doc": 3,
+      "per_document": {
+        "total_purged": 1441,
+        "false_purged_clean": 751,
+        "false_purge_rate": {
+          "k": 751,
+          "n": 1441,
+          "point": 0.5211658570437196,
+          "ci_low": 0.4953506680542784,
+          "ci_high": 0.5468684928558173
+        }
+      },
+      "per_chunk": {
+        "total_purged": 690,
+        "false_purged_clean": 0,
+        "false_purge_rate": {
+          "k": 0,
+          "n": 690,
+          "point": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.005536710396148054
+        },
+        "poison_recall": {
+          "k": 690,
+          "n": 690,
+          "point": 1.0,
+          "ci_low": 0.9944632896038518,
+          "ci_high": 0.9999999999999999
+        }
+      },
+      "poison_pool_sha256_pinned": "44df711454a9bada08e72e9e4a003a2cc845c43707ac93a3493e5168ec415cf2"
+    },
+    "E5": {
+      "experiment": "E5_asr",
+      "generation_model": "Qwen/Qwen2.5-3B-Instruct",
+      "n_questions": 100,
+      "top_k": 5,
+      "attack_success": {
+        "k": 98,
+        "n": 100,
+        "point": 0.98,
+        "ci_low": 0.9299868370580063,
+        "ci_high": 0.9944981477650318
+      },
+      "correct_answer_rate": {
+        "k": 0,
+        "n": 100,
+        "point": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.03699480747600191
+      },
+      "mean_gen_seconds": 0.33923848118283784
+    }
+  }
+}

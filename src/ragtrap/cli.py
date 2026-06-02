@@ -26,7 +26,6 @@ from .experiments import run_all_runnable
 from .gate import ingest
 from .logging_setup import setup_logging
 from .manifest import Manifest
-from .pending import run_all_pending
 from .revocation import revoke_source
 from .signing import Ed25519Signer
 from .synthetic import generate_corpus
@@ -68,28 +67,18 @@ def cmd_run_experiments(args: argparse.Namespace) -> int:
     )
 
     results = run_all_runnable(cfg)
-    results["pending"] = run_all_pending()
 
-    # Record the synthetic E0 corpus and (if loaded) the real corpus in the manifest.
+    # Record the synthetic E0 corpus in the manifest. The real third-party corpora and attack data
+    # are pinned by digest by the dedicated evaluation scripts (see scripts/run_real_eval.py and
+    # scripts/run_scaling.py), which write results/{real_results,scaling_results,aux_results}.json.
     e0_chunks = generate_corpus(
         n_chunks=200, n_principals=5, poison_fraction=0.1, seed=cfg.seed, poisoned_principals=1
     )
     manifest.add_corpus_input(
         "e0_synthetic", e0_chunks, description="E0 synthetic corpus (labelled)"
     )
-    corpus_note = results.get("corpus_note", {})
-    if isinstance(corpus_note, dict) and corpus_note.get("clean_chunks"):
-        manifest.add_input(
-            "beir_nq_subset",
-            digest=str(corpus_note.get("passage_text_sha256", "")),
-            description="BEIR nq passage subset (real public)",
-            passage_cap=corpus_note.get("passage_cap"),
-            passages_loaded=corpus_note.get("passages_loaded"),
-            hf_revision=corpus_note.get("hf_revision"),
-            clean_chunks=corpus_note.get("clean_chunks"),
-        )
 
-    results_path = cfg.results_dir / "results.json"
+    results_path = cfg.results_dir / "e0_results.json"
     manifest_path = cfg.results_dir / "manifest.json"
     _write_json(results_path, results)
     manifest.write(manifest_path)

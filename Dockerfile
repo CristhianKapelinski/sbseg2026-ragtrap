@@ -1,6 +1,9 @@
-# Reproducible image for RAGtrap. CPU-only; no GPU required.
-# Pinned base for determinism. Build:  docker build -t ragtrap .
-# Run E0-E4:  docker run --rm -v "$PWD/results:/app/results" -v "$PWD/logs:/app/logs" ragtrap
+# Reproducible image for RAGtrap. Pinned base for determinism.
+# Build:  docker build -t ragtrap .
+# E0 instrument validation (CPU only):  docker run --rm ragtrap selftest
+# The full evaluation (E1/E5 use a CUDA GPU to serve a local judge/generation model, E2/E4 run
+# CPU-only on the full corpus) is driven on the host by scripts/reproduce.sh with the .[eval]
+# extra; install torch with the CUDA build matching the host driver.
 FROM python:3.12-slim-bookworm
 
 # Avoid interactive prompts and bytecode; keep the image lean and deterministic.
@@ -20,9 +23,9 @@ RUN pip install --upgrade pip && pip install ".[data]"
 COPY tests ./tests
 COPY scripts ./scripts
 
-# The runnable experiments write to these mounted directories.
+# Experiments write to these mounted directories.
 RUN mkdir -p results logs data
 
-# Default: run the full runnable experiment suite (E0-E4) and write results + manifest.
+# Default: E0 instrument validation (the deterministic correctness property; CPU-only).
 ENTRYPOINT ["ragtrap"]
-CMD ["run-experiments"]
+CMD ["selftest"]
