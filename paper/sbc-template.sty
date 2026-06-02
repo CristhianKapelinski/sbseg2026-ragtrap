@@ -162,3 +162,8 @@
       \rightmargin\leftmargin}\item[\hskip\labelsep
                                     \bfseries\itshape Resumo.]\itshape}%
       {\endlist}
+
+%% SBC ref-list label fix: empty bib label (\cite still shows [Author Year])
+\makeatletter
+\renewcommand\@biblabel[1]{}
+\makeatother
