@@ -52,6 +52,10 @@
 
 \sloppy
 \setlength{\emergencystretch}{3em}
+% accept the loose justified lines \sloppy already allows (esp. long-title
+% bibliography entries) so they do not register as underfull warnings
+\hbadness=10000
+\vbadness=10000
 
 \title{\sysname{}: Signed Per-Chunk Provenance for\\
 Constant-Time Traceback and Source Revocation in RAG}
@@ -133,14 +137,16 @@ from that source? Query-time filters such as GMTP (a gradient-based masked-token
 probability detector) remove poisoned documents at retrieval but keep no
 provenance and offer no recovery~\cite{gmtp}. Forensic attributors, RAGForensics
 and RAGOrigin, attribute poisoned texts post hoc: triggered by a bad answer,
-they re-retrieve candidate passages and score each one, RAGForensics by
-prompting an LLM judge per candidate~\cite{ragforensics} and RAGOrigin by
-scoring each candidate with a proxy LLM and clustering~\cite{ragorigin}, an
-approach that is accurate but reactive and pays many model invocations per
-incident. None of these tools keeps the provenance needed to attribute in
-constant time or to revoke a source in one step. A 2026 survey confirms the gap:
-systematic support for provenance, rollback, and corpus recovery remains
-under-developed~\cite{ragsurvey}.
+they re-retrieve candidate passages and evaluate each one, RAGForensics by
+prompting an LLM judge to label each candidate poisoned or
+benign~\cite{ragforensics} and RAGOrigin by scoring each candidate with a proxy
+LLM and clustering~\cite{ragorigin}, an approach that is accurate but reactive
+and pays many model invocations per incident. None of these tools keeps the
+provenance needed to attribute in constant time or to revoke a source in one
+step. A 2026 survey confirms the gap:
+knowledge-base integrity and provenance defenses remain sparse, and
+knowledge-base governance and rollback is identified as a thin, under-developed
+area~\cite{ragsurvey}.
 
 We close this gap with \sysname{}, an ingestion gate that writes, per chunk, an
 Ed25519-signed provenance record (source URI, principal, SHA-256 content hash,
@@ -230,7 +236,7 @@ artifact.
 \caption{Capabilities of prior work versus \sysname{}.}
 \label{tab:related}
 \footnotesize
-\setlength{\tabcolsep}{3.5pt}
+\setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{0.9}
 \begin{tabular}{@{}lcccccc@{}}
 \toprule
@@ -307,7 +313,7 @@ mean-time-to-remediation after a source is found compromised. The operator is
 trusted and holds the private key; ingestion is where provenance is sealed.
 Detection at ingestion is best-effort and may have false negatives, so
 \sysname{}'s value is forensic and operational; query-time
-detectors~\cite{gmtp,ragpartmask} are a complementary layer.
+defenses~\cite{gmtp,ragpartmask} are a complementary layer.
 
 \textbf{Reproducibility.} Behaviour is configured entirely by environment
 variables (prefix \texttt{RAGTRAP\_}); nothing is hardcoded. Every run logs the
@@ -334,15 +340,15 @@ mechanism under test.
 \caption{Datasets, pinned by SHA-256.}
 \label{tab:data}
 \footnotesize
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{0.95}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.7cm}>{\raggedright\arraybackslash}p{3.7cm}>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{1.4cm}>{\raggedright\arraybackslash}p{2.2cm}@{}}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{0.9}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{1.7cm}>{\raggedright\arraybackslash}p{1.3cm}>{\raggedright\arraybackslash}p{2.0cm}@{}}
 \toprule
 Dataset & Contents & Size & License & Obtained \\
 \midrule
-BEIR \texttt{nq}~\cite{beir,naturalquestions} & Wikipedia passages (clean corpus) & \FullPassages{} passages & CC BY-SA 3.0 & HF \texttt{BeIR/nq} \\
-PoisonedRAG \texttt{nq}~\cite{poisonedrag} & Adversarial passages, 100 questions, 5 each & 500 passages & MIT & Released attack repo \\
-RAGOrigin feedback~\cite{ragorigin,ragforensics} & \texttt{e5} top-100 contexts per question, poison/clean labels & 100 questions & MIT & Released repo \\
+BEIR \texttt{nq} \cite{beir,naturalquestions} & Wikipedia passages, our clean substrate & \FullPassages{} passages & CC BY-SA 3.0 & HF \texttt{BeIR/nq} \\
+PoisonedRAG \texttt{nq} \cite{poisonedrag} & Adversarial passages, 100 questions, 5 each & 500 passages & MIT & Released attack repo \\
+RAGOrigin feedback \cite{ragorigin} & \texttt{e5}-retrieved contexts per question, poison/clean labels & 100 questions & MIT & Released repo \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -352,10 +358,9 @@ RAGOrigin feedback~\cite{ragorigin,ragforensics} & \texttt{e5} top-100 contexts 
 \caption{Experiment summary.}
 \label{tab:exps}
 \footnotesize
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{0.9}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{6.0cm}>{\raggedright\arraybackslash}p{4.4cm}@{}}
+\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{5.6cm}>{\raggedright\arraybackslash}p{4.6cm}@{}}
 \toprule
 Exp. & What it measures & Headline \\
 \midrule
@@ -364,7 +369,7 @@ E2 & Attribution vs.\ 2 baselines, identical suspects; drift curve & $\sim$\LatS
 E3 & Revocation MTTR and ingestion cost at scale & \FullMttrRatio$\times$ MTTR; \EdLatency~$\mu$s/chunk \\
 E4 & Attack-success context & \AsrPoint\% ASR \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}
 
 \textbf{E1: Instrument validation.} On a labelled corpus of \EZeroChunks{}
@@ -446,7 +451,7 @@ requires near-duplicate or semantic matching and is future work
 \caption{E2-drift: \sysname{} recall vs.\ drift fraction $p$.}
 \label{tab:drift}
 \footnotesize
-\setlength{\tabcolsep}{6pt}
+\setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{0.9}
 \begin{tabular}{@{}lccc@{}}
 \toprule
@@ -518,9 +523,9 @@ recall, precision, latency, and model-call count on identical inputs.
 \sysname{}'s exact-hash attribution misses post-ingestion byte drift (E2-drift);
 near-duplicate and semantic matching of suspects, adaptive and multi-attacker
 regimes, and other corpora (HotpotQA, MS-MARCO, whose released attack data we
-also obtained) are future work. Detection itself is out of scope and
-best-effort, with query-time filters as the complementary
-layer~\cite{gmtp,ragpartmask}. We assume a trusted operator holding the private
+also obtained) are future work. In our design detection itself is
+best-effort and out of scope; query-time defenses~\cite{gmtp,ragpartmask}
+remain a complementary layer. We assume a trusted operator holding the private
 key; key compromise is a residual risk.
 
 \textbf{Conclusion.} Corpus poisoning is cheap and effective, standards demand
