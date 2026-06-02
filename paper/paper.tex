@@ -214,11 +214,16 @@ A Privacy-Preserving Framework for Decentralized RAG using Blockchain, CSIT,
 2025.}} \sysname{} is orthogonal: per-chunk granularity, a real public-key
 signature, and the recovery layer of traceback plus revocation that the analogy
 implies, as the rightmost columns of Table~\ref{tab:related} make explicit.
-\textbf{Numerical-claim verification.} Orthogonal to provenance, RAGShield
-verifies extracted dollar amounts and percentages in government RAG text against
-a cross-source registry, reporting 0.0\% attack success on its numerical
-manipulation benchmark~\cite{ragshield}; it does not attest provenance, attribute
-sources, or revoke, and is a complementary content-level check.
+\textbf{Provenance defense-in-depth.} The closest prior work, RAGShield, also
+treats corpus poisoning as a supply-chain problem: it attests documents at
+ingestion (C2PA-inspired, Ed25519 by design but simulated with HMAC in its
+prototype), weights retrieval by trust tier, and flags cross-source
+contradictions, reporting 0.0\% attack success across a five-tier poisoning
+benchmark over 500 Natural Questions passages~\cite{ragshield}. It signs at
+document granularity rather than per chunk and provides neither signature-keyed
+traceback nor source revocation, the gap Table~\ref{tab:related} makes explicit;
+we compare capabilities rather than run it head to head because it releases no
+artifact.
 
 \begin{table}[htbp]
 \centering
@@ -237,7 +242,7 @@ RAGOrigin~\cite{ragorigin}        & \xmark & \cmark & \xmark & \xmark & \xmark &
 GMTP~\cite{gmtp}                  & \xmark & \cmark & \xmark & \xmark & \xmark & \xmark \\
 RevPRAG~\cite{revprag}            & \xmark & \xmark & \xmark & \xmark & \xmark & \xmark \\
 RAGPart/RAGMask~\cite{ragpartmask}& \xmark & \cmark & \xmark & \xmark & \xmark & \xmark \\
-RAGShield~\cite{ragshield}        & \xmark & \xmark & \xmark & \xmark & \xmark & \cmark \\
+RAGShield~\cite{ragshield}        & \cmark & \xmark & \xmark & \xmark & \xmark & \cmark \\
 D-RAG (blockchain)                & \cmark & \xmark & \cmark & \xmark & \xmark & \xmark \\
 \textbf{\sysname{}}               & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark \\
 \bottomrule
