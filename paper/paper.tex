@@ -57,8 +57,8 @@
 \hbadness=10000
 \vbadness=10000
 
-\title{\sysname{}: Signed Per-Chunk Provenance for\\
-Constant-Time Traceback and Source Revocation in RAG}
+\title{\sysname{}: Surgical Source Revocation and\\
+Constant-Time Traceback for Poisoned RAG Corpora}
 
 \author{Anonymous Author(s)\inst{1}}
 
@@ -70,21 +70,20 @@ Constant-Time Traceback and Source Revocation in RAG}
 
 \begin{abstract}
 Retrieval-augmented generation (RAG) grounds a language model on an external
-corpus ingested from untrusted sources with no admission trust boundary. Corpus
-poisoning is cheap: published attacks reach about \textbf{\PoisonASR\%} attack
-success by injecting \textbf{\PoisonTexts} passages per question. Existing
-forensics re-retrieve and score suspects at incident time, paying many model
-calls and keeping no provenance for recovery. We present \sysname{}, an
-ingestion gate that writes a per-chunk Ed25519-signed provenance record into the
-vector store, turning traceback into one constant-time content-hash lookup and
-revocation into one command. On the real PoisonedRAG attack over Natural
-Questions, attributing the same \textbf{\NsuspectsE{}} suspects as two forensic
-baselines run here on identical inputs, \sysname{} runs
-\textbf{$\sim$\LatSpeedup$\times$} and \textbf{$\sim$\LatSpeedupRO$\times$}
-faster with no model calls, revokes a source up to
-\textbf{\FullMttrRatio$\times$} faster than a full-corpus purge, and degrades to
-\textbf{\RTrecallDriftThree{}} recall under 30\% drift. We release a reproducible
-artifact.
+corpus ingested from untrusted sources with no admission trust boundary, and
+corpus poisoning is cheap: published attacks reach about \textbf{\PoisonASR\%}
+attack success by injecting \textbf{\PoisonTexts} passages per question. Once a
+detector or analyst flags a compromised source, the open problem is recovery:
+purging that source cleanly without scanning the corpus or discarding benign
+content. \sysname{} is a recovery and inventory layer that records per-chunk
+signed provenance at ingestion so revocation purges exactly the compromised
+principal's chunks at a false-purge rate of \textbf{\PerChunkFP{}}, against
+\textbf{\PerDocFP{}} for document-level purging, and traceback becomes one
+content-hash lookup. On the real PoisonedRAG attack over Natural Questions the
+lookup matches two forensic baselines with no model calls. Recovery rests on
+exact content-hash match, so recall falls to \textbf{\RTrecallDriftThree{}}
+under 30\% post-ingestion drift; \sysname{} neither detects nor prevents
+poisoning. We release a reproducible artifact.
 \end{abstract}
 
 \section{Introduction}
@@ -136,52 +135,61 @@ operator attribute the poisoned chunks to their source and purge every chunk
 from that source? Query-time filters such as GMTP (a gradient-based masked-token
 probability detector) remove poisoned documents at retrieval but keep no
 provenance and offer no recovery~\cite{gmtp}. Forensic attributors, RAGForensics
-and RAGOrigin, attribute poisoned texts post hoc: triggered by a bad answer,
-they re-retrieve candidate passages and evaluate each one, RAGForensics by
-prompting an LLM judge to label each candidate poisoned or
-benign~\cite{ragforensics} and RAGOrigin by scoring each candidate with a proxy
-LLM and clustering~\cite{ragorigin}, an approach that is accurate but reactive
-and pays many model invocations per incident. None of these tools keeps the
+and RAGOrigin, descend from poisoning traceback in neural-network training, which
+traces a successful attack back to the responsible training samples by iterative
+clustering and unlearning~\cite{poison-forensics}; they attribute poisoned texts
+post hoc: triggered by a bad answer, they re-retrieve candidate passages and
+evaluate each one, RAGForensics by prompting an LLM judge to label each candidate
+poisoned or benign~\cite{ragforensics} and RAGOrigin by scoring each candidate
+with a proxy LLM and clustering~\cite{ragorigin}, an approach that is accurate but
+reactive and pays many model invocations per incident. None of these tools keeps the
 provenance needed to attribute in constant time or to revoke a source in one
 step. A 2026 survey confirms the gap:
 knowledge-base integrity and provenance defenses remain sparse, and
 knowledge-base governance and rollback is identified as a thin, under-developed
 area~\cite{ragsurvey}.
 
-We close this gap with \sysname{}, an ingestion gate that writes, per chunk, an
-Ed25519-signed provenance record (source URI, principal, SHA-256 content hash,
-detector verdicts, timestamp) into the vector store. Two side indices turn the
-record into operational leverage: attributing a suspect chunk becomes a single
-constant-time content-hash lookup instead of an iterative re-retrieval, and
-revoking a compromised source becomes one command that enumerates and purges
-exactly that source's chunks. On the real PoisonedRAG attack over Natural
-Questions~\cite{naturalquestions}, with the \NsuspectsE{} top-ranked suspects
-surfaced by the released \texttt{e5} dense retriever~\cite{e5}, \sysname{}'s
-single lookup attributes each suspect with no model invocation, about
-\textbf{\LatSpeedup$\times$} faster than the RAGForensics LLM-judge baseline and
-\textbf{\LatSpeedupRO$\times$} faster than the RAGOrigin proxy-scoring baseline,
-both run here on identical inputs, and it revokes a compromised source in one
-command. The supply-chain framing and the ingestion gate are not themselves
-novel; the contribution is the recovery layer that framing implies but that no
-surveyed tool builds.
+We close this gap with \sysname{}, a recovery and inventory layer that builds on
+an ingestion gate writing, per chunk, an Ed25519-signed provenance record
+(source URI, principal, SHA-256 content hash, detector verdicts, timestamp) into
+the vector store. Per-chunk signed provenance is itself anticipated by prior and
+concurrent work: cryptographic provenance protocols sign individual RAG
+embeddings to their source-content hash~\cite{VectorPin}, bind answers to signed
+source evidence with portable receipts~\cite{leray2025policy}, and commit
+chunk-localised fingerprints in issuer-signed Merkle trees in adjacent
+domains~\cite{MerkleSpeech}. \sysname{}'s contribution is the engineered recovery
+layer that the same record enables and that none of these systems provides
+together: two side indices turn the record into operational leverage. A principal
+index makes revoking a compromised source one command that enumerates and purges
+exactly that source's chunks, surgically: on real partially-poisoned documents
+this localises the poisoned chunks at a false-purge rate of
+\textbf{\PerChunkFP{}}, against \textbf{\PerDocFP{}} when purging is done at
+document granularity. A content-hash index makes attributing a suspect chunk a
+single constant-time lookup instead of an iterative re-retrieval. On the real
+PoisonedRAG attack over Natural Questions~\cite{naturalquestions}, with the
+\NsuspectsE{} top-ranked suspects surfaced by the released \texttt{e5} dense
+retriever~\cite{e5}, the lookup attributes each suspect with no model invocation,
+matching two forensic baselines run here on identical inputs while costing no
+model calls. \sysname{} is a forensic and operational recovery layer: it depends
+on an external detector or analyst to flag a compromised source and does not
+itself detect or prevent poisoning.
 
-This paper makes four contributions.
-\textbf{(C1)} A per-chunk signed-provenance gate (Section~\ref{sec:design}) that
-embeds the chunk's own content hash and admitting detector verdicts in the
-vector store with Ed25519 public-key signatures.
-\textbf{(C2)} Traceback reduced to one constant-time content-hash lookup,
-measured against two forensic baselines on identical third-party inputs (E2,
+This paper makes three contributions.
+\textbf{(C1)} Surgical one-command source revocation: a principal-indexed
+batch purge that removes exactly a compromised principal's chunks, evaluated
+against document-level purging for false-purge rate and for mean-time-to-remediation
+at corpus scale (E1, E3; Section~\ref{sec:eval}).
+\textbf{(C2)} Traceback reduced to one constant-time content-hash lookup over
+the signed records, matched against two forensic baselines on identical
+third-party inputs and stress-tested under post-ingestion drift (E2,
 Section~\ref{sec:eval}).
-\textbf{(C3)} One-command source revocation that batch-purges every chunk of a
-compromised principal, evaluated for mean-time-to-remediation at corpus scale
-(E3, Section~\ref{sec:eval}).
-\textbf{(C4)} A reproducible open artifact (Section~\ref{sec:limits}) with a
+\textbf{(C3)} A reproducible open artifact (Section~\ref{sec:limits}) with a
 digest-pinned real corpus, third-party attack and baseline code, and an
 end-to-end harness.
 
 \section{Related Work}
 
-We position \sysname{} against four lines of work, summarized in
+We position \sysname{} against five lines of work, summarized in
 Table~\ref{tab:related}. \textbf{Detection and query-time filtering.} GMTP
 filters poisoned documents by masking high-impact tokens and checking their
 probability under a masked language model, eliminating over 90\% of poisoned
@@ -195,17 +203,20 @@ targets the operational axis those tools do not address and claims no novelty in
 detection. RevPRAG and GMTP act at retrieval/inference time, not at forensic
 time over a fixed suspect list, so they are not run as attributors here.
 
-\textbf{Forensic attribution.} RAGForensics introduced traceback for RAG,
-re-retrieving candidate texts and prompting an LLM to judge which are
-poisoned~\cite{ragforensics}; RAGOrigin extends this to black-box responsibility
-attribution with an adaptive scope and rank/relevance/influence
-scoring~\cite{ragorigin}. Both report strong attribution accuracy, but both are
-reactive, triggered per bad response, and their per-candidate scoring is costly
-at forensic time; neither attests provenance at ingestion nor revokes a source.
-\sysname{} is complementary: it pays a small one-time signing cost at ingestion
-so that attribution later becomes a constant-time lookup, and adds the missing
-revocation step. We run both as baselines on identical suspects in
-Section~\ref{sec:eval}.
+\textbf{Forensic attribution.} Poison Forensics established pipeline-level
+traceback, tracing a successful poisoning attack back to the responsible training
+samples by iterative clustering and unlearning-based pruning~\cite{poison-forensics};
+the RAG-specific attributors build on this lineage. RAGForensics introduced
+traceback for RAG, re-retrieving candidate texts and prompting an LLM to judge
+which are poisoned~\cite{ragforensics}; RAGOrigin extends this to black-box
+responsibility attribution with an adaptive scope and rank/relevance/influence
+scoring~\cite{ragorigin}. All three report strong attribution accuracy, but all
+are reactive, triggered per bad response, and their per-candidate scoring is
+costly at forensic time; none attests provenance at ingestion or revokes a
+source. \sysname{} is complementary: it pays a small one-time signing cost at
+ingestion so that attribution later becomes a constant-time lookup, and adds the
+missing revocation step. We run both RAG attributors as baselines on identical
+suspects in Section~\ref{sec:eval}.
 
 \textbf{Ingestion-time attestation.} Generic supply-chain signing analogues sign
 at file granularity, carry no detector verdicts, and are not instantiated for the
@@ -220,6 +231,26 @@ A Privacy-Preserving Framework for Decentralized RAG using Blockchain, CSIT,
 2025.}} \sysname{} is orthogonal: per-chunk granularity, a real public-key
 signature, and the recovery layer of traceback plus revocation that the analogy
 implies, as the rightmost columns of Table~\ref{tab:related} make explicit.
+
+\textbf{Cryptographic provenance and receipts.} A line of work signs
+provenance into the RAG pipeline at varying granularities, which makes per-chunk
+signed provenance itself unsurprising rather than the locus of novelty.
+Concurrently, VectorPin signs each individual RAG embedding to its source-content
+hash, producing model, and issuer key with an Ed25519 signature, giving
+tamper-evidence against steganographic embedding-store exfiltration, but stops at
+per-embedding integrity without traceback or revocation~\cite{VectorPin}.
+Policy-governed RAG binds each material answer to cryptographically anchored
+source evidence and emits portable COSE/JOSE compliance receipts for regulated
+workflows~\cite{leray2025policy}; ZKPROV uses zero-knowledge proofs to verify
+that responses were produced from authority-certified datasets without revealing
+their contents, at dataset granularity~\cite{ZKPROV}; and, in the speech domain,
+MerkleSpeech commits chunk-localised perceptual fingerprints in an issuer-signed
+Merkle tree for public-key-verifiable attribution~\cite{MerkleSpeech}. These
+establish signed or verifiable provenance, per embedding, per answer, per
+dataset, or per audio chunk, yet none pairs it with constant-time content-hash
+traceback and one-command source revocation over a text RAG corpus. \sysname{}
+adopts per-chunk signed provenance as a means and contributes that recovery layer.
+
 \textbf{Provenance defense-in-depth.} The closest prior work, RAGShield, also
 treats corpus poisoning as a supply-chain problem: it attests documents at
 ingestion (C2PA-inspired, Ed25519 by design but simulated with HMAC in its
@@ -233,7 +264,7 @@ artifact.
 
 \begin{table}[htbp]
 \centering
-\caption{Capabilities of prior work versus \sysname{}.}
+\caption{Capabilities of prior work versus \sysname{}. $^{\dagger}$concurrent.}
 \label{tab:related}
 \footnotesize
 \setlength{\tabcolsep}{5pt}
@@ -250,6 +281,11 @@ RevPRAG~\cite{revprag}            & \xmark & \xmark & \xmark & \xmark & \xmark &
 RAGPart/RAGMask~\cite{ragpartmask}& \xmark & \cmark & \xmark & \xmark & \xmark & \xmark \\
 RAGShield~\cite{ragshield}        & \cmark & \xmark & \xmark & \xmark & \xmark & \cmark \\
 D-RAG (blockchain)                & \cmark & \xmark & \cmark & \xmark & \xmark & \xmark \\
+VectorPin~\cite{VectorPin}$^{\dagger}$ & \cmark & \xmark & \cmark & \xmark & \xmark & \xmark \\
+Policy-RAG~\cite{leray2025policy} & \xmark & \xmark & \cmark & \xmark & \xmark & \xmark \\
+ZKPROV~\cite{ZKPROV}              & \xmark & \xmark & \cmark & \xmark & \xmark & \xmark \\
+MerkleSpeech~\cite{MerkleSpeech}  & \cmark & \cmark & \cmark & \xmark & \xmark & \xmark \\
+Poison Forensics~\cite{poison-forensics} & \xmark & \xmark & \xmark & \xmark & \xmark & \cmark \\
 \textbf{\sysname{}}               & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark \\
 \bottomrule
 \end{tabular}
@@ -258,8 +294,10 @@ D-RAG (blockchain)                & \cmark & \xmark & \cmark & \xmark & \xmark &
 Columns of Table~\ref{tab:related}, left to right, are: an ingestion-time gate,
 per-chunk granularity, real public-key signatures, signature-keyed traceback,
 one-command source revocation, and operational evaluation on latency, recall,
-and mean-time-to-remediation. \sysname{} is the only entry that occupies the
-four rightmost capabilities jointly.
+and mean-time-to-remediation. Several entries already provide signed provenance
+at some granularity; the two rightmost capabilities, signature-keyed traceback
+and one-command source revocation, are where \sysname{} is the only entry,
+delivering both together over a text RAG corpus.
 
 \section{Design}\label{sec:design}
 
@@ -325,15 +363,17 @@ per run and never written to disk.
 \section{Evaluation}\label{sec:eval}
 
 We run four experiments on the datasets of Table~\ref{tab:data}, summarized in
-Table~\ref{tab:exps}. \textbf{E1} validates the instrument on a labelled corpus.
-\textbf{E2} compares forensic-time attribution on identical real suspects
-against two baselines (delivering C2), and measures recall under post-ingestion
-drift. \textbf{E3} measures revocation mean-time-to-remediation and per-chunk
-ingestion overhead at corpus scale (delivering C1 and C3). \textbf{E4} confirms
-the suspects are genuinely dangerous via attack success. The attack, retrieval,
-ground-truth labels, and baselines are all third-party artifacts that \sysname{}
-did not author, so the suspect set used for attribution is independent of the
-mechanism under test.
+Table~\ref{tab:exps}. \textbf{E1} validates the instrument on a labelled corpus,
+including exact-principal purging with no collateral. \textbf{E3} measures the
+surgical revocation against document-level purging for false-purge rate and
+mean-time-to-remediation, with per-chunk ingestion overhead at corpus scale (the
+lead result, delivering C1). \textbf{E2} compares forensic-time attribution on
+identical real suspects against two baselines (delivering C2), and measures
+recall under post-ingestion drift. \textbf{E4} confirms the suspects are
+genuinely dangerous via attack success. The attack, retrieval, ground-truth
+labels, and baselines are all third-party artifacts that \sysname{} did not
+author, so the suspect set used for attribution is independent of the mechanism
+under test.
 
 \begin{table}[htbp]
 \centering
@@ -365,8 +405,8 @@ RAGOrigin feedback \cite{ragorigin} & \texttt{e5}-retrieved contexts per questio
 Exp. & What it measures & Headline \\
 \midrule
 E1 & Instrument validation on labelled corpus & verify, tamper-reject, exact purge \\
-E2 & Attribution vs.\ 2 baselines, identical suspects; drift curve & $\sim$\LatSpeedup$\times$ / $\sim$\LatSpeedupRO$\times$ faster, 0 model calls \\
-E3 & Revocation MTTR and ingestion cost at scale & \FullMttrRatio$\times$ MTTR; \EdLatency~$\mu$s/chunk \\
+E3 & Surgical revocation vs.\ doc-level; MTTR and cost at scale & \PerChunkFP{} vs.\ \PerDocFP{} false-purge; \EdLatency~$\mu$s/chunk \\
+E2 & Attribution vs.\ 2 baselines, identical suspects; drift curve & matches baselines, 0 model calls; drift to \RTrecallDriftThree{} \\
 E4 & Attack-success context & \AsrPoint\% ASR \\
 \bottomrule
 \end{tabular}
@@ -411,7 +451,7 @@ Precision         & $-$                          & \BLprecision{} [\BLprecisionL
 FPR               & $-$                          & \BLfpr{}    & \ROfpr{} \\
 Latency / suspect & \textbf{\RTlatPerSus~$\mu$s} & \BLperSus~s & \ROperSus~ms \\
 Model calls       & \textbf{0}                   & \BLcalls{}  & \ROcalls{} \\
-Speedup           & $-$                          & \textbf{$\sim$\LatSpeedup$\times$} & \textbf{$\sim$\LatSpeedupRO$\times$} \\
+Speedup           & $-$                          & $\sim$\LatSpeedup$\times$ & $\sim$\LatSpeedupRO$\times$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -424,13 +464,15 @@ FPR \ROfpr{}, consistent with its published low false-positive profile. They
 differ in cost: each pays \BLcalls{} and \ROcalls{} local model calls
 respectively over the \NsuspectsE{} suspects, taking \BLperSus~s and
 \ROperSus~ms per suspect. \sysname{} instead reads the principal sealed at
-ingestion with one content-hash lookup per suspect, \RTlatPerSus~$\mu$s per
-suspect with no model invocation, about \textbf{\LatSpeedup$\times$} faster than
-the judge and \textbf{\LatSpeedupRO$\times$} faster than the proxy scorer end to
-end. While provenance is intact a lookup returns the recorded principal directly,
-so \sysname{}'s accuracy is not a detection score and is omitted from the
-accuracy rows; the accuracy of interest is how recall degrades once provenance is
-incomplete, which we measure next.
+ingestion with one content-hash lookup per suspect, \RTlatPerSus~$\mu$s and no
+model invocation. That a stored-index lookup runs orders of magnitude faster than
+an LLM-in-the-loop attributor (\LatSpeedup$\times$ over the judge,
+\LatSpeedupRO$\times$ over the proxy scorer) is expected; the point is only that
+attribution after the index exists is essentially free, not that the index out-
+classes the forensic tools on accuracy. While provenance is intact a lookup
+returns the recorded principal directly, so \sysname{}'s accuracy is not a
+detection score and is omitted from the accuracy rows; the accuracy of interest
+is how recall degrades once provenance is incomplete, which we measure next.
 
 \textbf{E2-drift: recall under post-ingestion mutation.} \sysname{} resolves a
 suspect only if its bytes were admitted through the gate, so a poisoned chunk
@@ -442,8 +484,11 @@ poisoned suspects after ingestion drops recall from \RTrecall{} at $p{=}0$ to
 \textbf{\RTrecallDriftFive{}} (95\%~CI
 [\RTrecallDriftFiveLo{},\,\RTrecallDriftFiveHi{}]) at $p{=}0.5$
 (Table~\ref{tab:drift}). Precision stays at \RTprecision{} because a hash match
-is exact; the missed chunks are false negatives. Recovering drifted variants
-requires near-duplicate or semantic matching and is future work
+is exact; the missed chunks are false negatives. This is exactly the regime a
+competent, content-mutating adversary operates in~\cite{carlini}: recovering
+drifted variants requires near-duplicate or semantic matching, for instance
+MinHash~\cite{broder1997minhash}, SimHash~\cite{charikar2002simhash}, or
+locality-sensitive hashing~\cite{indyk1998lsh}, and is future work
 (Section~\ref{sec:limits}).
 
 \begin{table}[htbp]
@@ -464,29 +509,33 @@ Precision & \RTprecision{} & \RTprecision{} & \RTprecision{} \\
 \end{tabular}
 \end{table}
 
-\textbf{E3: Revocation MTTR and ingestion cost at scale.} Treating one
-PoisonedRAG attacker principal as compromised, we remove it two ways on the real
-corpus: \sysname{}'s \texttt{revoke-source} batch purge versus a manual loop that
-scans the whole corpus. \sysname{} reads the principal's \RevChunks{} chunk ids
-from the index and purges them in \textbf{\FullRevMttr~$\mu$s} on the full
-\FullChunks{}-chunk corpus, while the manual scan takes \FullManMttr~ms, a
-\textbf{\FullMttrRatio$\times$} advantage (Table~\ref{tab:scale}). The advantage
-is structural: revocation cost scales with the revoked principal's chunk count
-while the manual scan scales with the whole corpus, so the ratio grows from
-\SmallMttrRatio$\times$ at \SmallPassages{} passages to \FullMttrRatio$\times$ at
-the full corpus. Per-chunk Ed25519 signing costs about \textbf{\EdLatency~$\mu$s}
-($\sim$\EdThroughput{} chunks/s, single-threaded), producing a fixed
-\EdSig{}-byte signature in an \EdRecord{}-byte record. This is about
-\textbf{\EdOverHmac$\times$} the cost of a symmetric HMAC stand-in
-(\HmacLatency~$\mu$s, \HmacSig{}-byte tag); in exchange, public-key signing
-yields non-repudiable provenance verifiable without the secret key. We also
-contrast per-chunk against per-document granularity: on \EThreeDocs{} real
-partially-poisoned documents (real NQ passages with real PoisonedRAG passages
-injected under one principal), the per-document scheme over-purges clean
-fragments at a false-purge rate of \textbf{\PerDocFP{}} (95\%~CI
+\textbf{E3: Surgical revocation, then cost at scale.} The lead result is that
+per-chunk revocation purges a compromised source without collateral. On
+\EThreeDocs{} real partially-poisoned documents (real NQ passages with real
+PoisonedRAG passages injected under one principal), purging at document
+granularity removes whole documents and so over-purges their benign fragments at
+a false-purge rate of \textbf{\PerDocFP{}} (95\%~CI
 [\PerDocFPLo{},\,\PerDocFPHi{}], \PerDocFalse{} of \PerDocPurged{} removed chunks
-clean), while \sysname{}'s per-chunk scheme localises the poisoned chunks at
-false-purge rate \textbf{\PerChunkFP{}}.
+were clean), whereas \sysname{}'s per-chunk principal index localises and removes
+exactly the poisoned chunks at a false-purge rate of \textbf{\PerChunkFP{}}. This
+clean excision, not the speed, is what the recovery layer buys.
+
+The recovery operations are also cheap. Treating one PoisonedRAG attacker
+principal as compromised, we remove it two ways on the real corpus: \sysname{}'s
+\texttt{revoke-source} batch purge versus a manual loop that scans the whole
+corpus. The fair comparison is maintaining a provenance index versus not: with an
+index, revocation is an $O(1)$ lookup of the principal's \RevChunks{} chunk ids
+followed by their deletion, \FullRevMttr~$\mu$s on the full \FullChunks{}-chunk
+corpus, while without one the scan over every chunk takes \FullManMttr~ms; the
+\FullMttrRatio$\times$ ratio simply reflects $O(1)$ versus $O(\text{corpus})$ work
+and grows with corpus size, from \SmallMttrRatio$\times$ at \SmallPassages{}
+passages to \FullMttrRatio$\times$ at the full corpus (Table~\ref{tab:scale}).
+The cost of the index is paid once at ingestion: per-chunk Ed25519 signing takes
+about \EdLatency~$\mu$s ($\sim$\EdThroughput{} chunks/s, single-threaded),
+producing a fixed \EdSig{}-byte signature in an \EdRecord{}-byte record, about
+\EdOverHmac$\times$ the cost of a symmetric HMAC stand-in (\HmacLatency~$\mu$s,
+\HmacSig{}-byte tag) in exchange for non-repudiable provenance verifiable without
+the secret key.
 
 \begin{table}[htbp]
 \centering
@@ -513,35 +562,51 @@ mislead the pipeline it protects.
 
 \section{Limitations and Conclusion}\label{sec:limits}
 
+\textbf{Scope: what \sysname{} is and is not.} \sysname{} is a forensic and
+operational layer for recovery and for inventory-and-exclusion: given that a
+source has been flagged compromised, it attributes the source's chunks and
+removes them cleanly. It does not detect or prevent poisoning, and it relies on
+an external detector or a human analyst to flag the compromised source in the
+first place; the ingestion detectors are best-effort and out of scope, and
+query-time defenses~\cite{gmtp,ragpartmask} remain a complementary layer.
+Attribution rests on an exact content-hash match, so it is not robust to a
+content-mutating adversary: any post-ingestion paraphrase or split-view
+mutation~\cite{carlini} of a chunk's bytes evades the hash, dropping recall to
+\RTrecallDriftThree{} at 30\% drift and \RTrecallDriftFive{} at 50\%
+(Table~\ref{tab:drift}). Closing this gap needs near-duplicate or semantic
+matching~\cite{broder1997minhash,charikar2002simhash,indyk1998lsh} and is the
+central piece of future work. Per-chunk signed provenance, the substrate the
+recovery layer is built on, is not claimed as novel: prior and concurrent systems
+already sign provenance per embedding, per answer, per dataset, or per audio
+chunk~\cite{VectorPin,leray2025policy,ZKPROV,MerkleSpeech}.
+
 \textbf{Threats to validity.} E2's suspects and labels come from one released
 attack-feedback set over NQ; the corpus-scale results (E3) use the full
 \FullPassages{}-passage corpus, and the structural arguments (constant work for
 lookup and revocation) do not depend on scale. The two baselines are the
 published RAGForensics and RAGOrigin procedures run over local open models rather
 than the hosted models the original papers used; we report our own measured
-recall, precision, latency, and model-call count on identical inputs.
-\sysname{}'s exact-hash attribution misses post-ingestion byte drift (E2-drift);
-near-duplicate and semantic matching of suspects, adaptive and multi-attacker
-regimes, and other corpora (HotpotQA, MS-MARCO, whose released attack data we
-also obtained) are future work. In our design detection itself is
-best-effort and out of scope; query-time defenses~\cite{gmtp,ragpartmask}
-remain a complementary layer. We assume a trusted operator holding the private
-key; key compromise is a residual risk.
+recall, precision, latency, and model-call count on identical inputs. Adaptive
+and multi-attacker regimes, and other corpora (HotpotQA, MS-MARCO, whose released
+attack data we also obtained), are future work. We assume a trusted operator
+holding the private key; key compromise is a residual risk.
 
 \textbf{Conclusion.} Corpus poisoning is cheap and effective, standards demand
 provenance and quarantine, and the closest tools either filter at query time or
-attribute post hoc with many model calls and no recovery step. The operational
-question we opened, how fast and how cheaply an operator can attribute and purge
-a compromised source, has a concrete answer: by sealing per-chunk Ed25519
-provenance at ingestion, \sysname{} makes traceback a single constant-time
-lookup, about \LatSpeedup$\times$ and \LatSpeedupRO$\times$ faster than two
-forensic baselines on identical suspects with no model calls, degrading to
-\RTrecallDriftThree{} recall under 30\% post-ingestion drift, and it turns
-recovery into one command whose advantage over a full-corpus purge grows to
-\FullMttrRatio$\times$ at the full \FullPassages{}-passage corpus, at an
-ingestion cost of \EdLatency~$\mu$s/chunk. This is the recovery layer the
-supply-chain analogy implies but that no surveyed tool had built. We release
-\sysname{} as a reproducible, double-blind
+attribute post hoc with no recovery step. The operational question we opened,
+once a source is found compromised, how precisely and how cheaply an operator can
+purge it, has a concrete answer: by sealing per-chunk signed provenance at
+ingestion, \sysname{} revokes a compromised source surgically, removing exactly
+its chunks at a false-purge rate of \textbf{\PerChunkFP{}} where document-level
+purging discards \PerDocFP{} of what it removes, and turns traceback into a
+content-hash lookup that costs no model calls. Both recovery operations are cheap
+because the index does the work, but the value is the clean excision, not the
+speed. The limit is equally concrete: the exact-hash basis means \sysname{} is
+not robust to a content-mutating adversary, recall falling to
+\RTrecallDriftThree{} under 30\% post-ingestion drift, and it presupposes an
+external detector or analyst to flag the source. Pairing this recovery layer with
+near-duplicate matching is the natural next step. We release \sysname{} as a
+reproducible, double-blind
 artifact.\footnote{\href{https://anonymous.4open.science}{Anonymized artifact
 repository (link provided for double-blind review).}}
 
