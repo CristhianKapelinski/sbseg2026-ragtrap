@@ -41,7 +41,7 @@ plt.rcParams.update(
         "lines.markersize": 4,
         "figure.dpi": 200,
         "savefig.bbox": "tight",
-        "savefig.pad_inches": 0.03,
+        "savefig.pad_inches": 0.02,
         "pdf.fonttype": 42,
     }
 )
@@ -76,21 +76,31 @@ def fig_drift(real: dict) -> None:
         capsize=2.5,
         capthick=0.9,
     )
-    # annotate each point, nudging the p=0 label below the ceiling and the
-    # others above so no text overlaps the markers, error bars, or the frame.
-    for x, y in zip(xs, ys):
-        dy = -11 if y > 0.95 else 6
+    # annotate each point so every label stays fully inside the axes: the
+    # rightmost point's label goes to its LEFT (right-aligned) and above so it
+    # cannot spill past the right frame; the p=0 ceiling label sits below-right;
+    # interior labels go above-right.
+    last = len(xs) - 1
+    for i, (x, y) in enumerate(zip(xs, ys)):
+        if i == last:
+            xoff, yoff, ha = -7, 8, "right"
+        elif y > 0.95:
+            xoff, yoff, ha = 7, -12, "left"
+        else:
+            xoff, yoff, ha = 7, 7, "left"
         ax.annotate(
             f"{y:.2f}",
             (x, y),
             textcoords="offset points",
-            xytext=(7, dy),
+            xytext=(xoff, yoff),
+            ha=ha,
             fontsize=8,
         )
     ax.set_xlabel("Post-ingestion drift fraction $p$")
     ax.set_ylabel("Traceback recall")
-    ax.set_xlim(-0.04, 0.56)
-    ax.set_ylim(0.40, 1.06)
+    # right headroom so no marker/label sits against the right frame
+    ax.set_xlim(-0.04, 0.60)
+    ax.set_ylim(0.40, 1.08)
     ax.set_xticks([0.0, 0.3, 0.5])
     ax.set_yticks([0.4, 0.6, 0.8, 1.0])
     ax.grid(True, linewidth=0.4, alpha=0.4)
@@ -124,20 +134,26 @@ def fig_revoke(scaling: dict) -> None:
     ax.set_yscale("log")
     ax.set_xlabel("Clean corpus size (passages)")
     ax.set_ylabel("MTTR (ms)")
-    # widen the y-range so the ratio labels above the top manual point are not
-    # clipped by the frame
-    ax.set_ylim(top=ax.get_ylim()[1] * 6)
-    # annotate each x with the manual/revoke ratio; the leftmost label would
-    # collide with the y-axis if right-aligned, so left-align that one
+    # extra top headroom so no ratio label is clipped by the frame or overlaps
+    # the upper-left legend. Place each ratio below-left of its manual point so
+    # the labels sit between the two curves, clear of the top/right edge. The
+    # rightmost label goes ABOVE-left of its point (into the cleared headroom)
+    # so it does not collide with the next-to-last label below the curve.
+    ax.set_ylim(top=ax.get_ylim()[1] * 25)
+    last = len(pts) - 1
     for i, p in enumerate(pts):
-        first = i == 0
+        if i == last:
+            xoff, yoff, ha, va = -6, 11, "right", "bottom"
+        else:
+            xoff, yoff, ha, va = 5, -13, "left", "top"
         ax.annotate(
             f"{round(p['mttr_ratio']):,}$\\times$",
             (p["n_clean_passages"], p["manual_mttr_s"] * 1e3),
             textcoords="offset points",
-            xytext=(5, 6) if first else (-3, 6),
+            xytext=(xoff, yoff),
             fontsize=7,
-            ha="left" if first else "right",
+            ha=ha,
+            va=va,
         )
     ax.grid(True, which="both", linewidth=0.4, alpha=0.35)
     ax.legend(loc="upper left", frameon=False)
