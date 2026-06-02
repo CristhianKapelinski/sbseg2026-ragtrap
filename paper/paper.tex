@@ -65,23 +65,22 @@ Constant-Time Traceback and Source Revocation in RAG}
 \maketitle
 
 \begin{abstract}
-Retrieval-augmented generation (RAG) grounds a language model on passages
-fetched from an external corpus, yet that corpus is ingested from untrusted
-sources with no trust boundary at admission. Corpus poisoning is cheap:
-published attacks reach about \textbf{\PoisonASR\%} attack success by injecting
-\textbf{\PoisonTexts} passages per question. Existing forensics re-retrieve and
-score suspects at incident time, paying many model calls per incident and
-keeping no provenance for recovery. We present \sysname{}, an ingestion gate
-that writes a per-chunk Ed25519-signed provenance record into the vector store,
-turning traceback into one constant-time content-hash lookup and enabling
-one-command revocation of a compromised source. On the real PoisonedRAG attack
-over Natural Questions, attributing the same \textbf{\NsuspectsE{}} suspects as
-two forensic baselines run here on identical inputs, \sysname{} runs
+Retrieval-augmented generation (RAG) grounds a language model on an external
+corpus ingested from untrusted sources with no admission trust boundary. Corpus
+poisoning is cheap: published attacks reach about \textbf{\PoisonASR\%} attack
+success by injecting \textbf{\PoisonTexts} passages per question. Existing
+forensics re-retrieve and score suspects at incident time, paying many model
+calls and keeping no provenance for recovery. We present \sysname{}, an
+ingestion gate that writes a per-chunk Ed25519-signed provenance record into the
+vector store, turning traceback into one constant-time content-hash lookup and
+revocation into one command. On the real PoisonedRAG attack over Natural
+Questions, attributing the same \textbf{\NsuspectsE{}} suspects as two forensic
+baselines run here on identical inputs, \sysname{} runs
 \textbf{$\sim$\LatSpeedup$\times$} and \textbf{$\sim$\LatSpeedupRO$\times$}
 faster with no model calls, revokes a source up to
 \textbf{\FullMttrRatio$\times$} faster than a full-corpus purge, and degrades to
-\textbf{\RTrecallDriftThree{}} recall under 30\% post-ingestion drift. We release
-\sysname{} as a reproducible artifact.
+\textbf{\RTrecallDriftThree{}} recall under 30\% drift. We release a reproducible
+artifact.
 \end{abstract}
 
 \section{Introduction}
