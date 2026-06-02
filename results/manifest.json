@@ -1,10 +1,10 @@
 {
   "created_utc": "2026-06-02T13:10:01.139381+00:00",
   "config": {
-    "repo_root": "/home/kapelinski/sbseg-neutro/papers/ragtrap",
-    "data_dir": "/home/kapelinski/sbseg-neutro/papers/ragtrap/data",
-    "logs_dir": "/home/kapelinski/sbseg-neutro/papers/ragtrap/logs",
-    "results_dir": "/home/kapelinski/sbseg-neutro/papers/ragtrap/results",
+    "repo_root": "/artifact/ragtrap",
+    "data_dir": "/artifact/ragtrap/data",
+    "logs_dir": "/artifact/ragtrap/logs",
+    "results_dir": "/artifact/ragtrap/results",
     "signer": "ed25519",
     "chunk_chars": 512,
     "chunk_overlap": 64,
@@ -14,7 +14,7 @@
     "seed": 1337
   },
   "signer_identity": "ed25519:ae603751fcf9cbec41dec05c78393ad31a38da8621e34b0cd1d69c1a5c2af0ca",
-  "log_path": "/home/kapelinski/sbseg-neutro/papers/ragtrap/logs/run-20260602T131001Z.log",
+  "log_path": "/artifact/ragtrap/logs/run-20260602T131001Z.log",
   "inputs": {
     "e0_synthetic": {
       "sha256": "c4fc6142d6d8997a2e989d5a899ef01658cbd82a713fe9e1cf9872fa1e962de5",

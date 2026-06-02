@@ -81,7 +81,7 @@ def fig_drift(real: dict) -> None:
     # cannot spill past the right frame; the p=0 ceiling label sits below-right;
     # interior labels go above-right.
     last = len(xs) - 1
-    for i, (x, y) in enumerate(zip(xs, ys)):
+    for i, (x, y) in enumerate(zip(xs, ys, strict=False)):
         if i == last:
             xoff, yoff, ha = -7, 8, "right"
         elif y > 0.95:

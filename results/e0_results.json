@@ -5,10 +5,10 @@
     "processor": "x86_64"
   },
   "config": {
-    "repo_root": "/home/kapelinski/sbseg-neutro/papers/ragtrap",
-    "data_dir": "/home/kapelinski/sbseg-neutro/papers/ragtrap/data",
-    "logs_dir": "/home/kapelinski/sbseg-neutro/papers/ragtrap/logs",
-    "results_dir": "/home/kapelinski/sbseg-neutro/papers/ragtrap/results",
+    "repo_root": "/artifact/ragtrap",
+    "data_dir": "/artifact/ragtrap/data",
+    "logs_dir": "/artifact/ragtrap/logs",
+    "results_dir": "/artifact/ragtrap/results",
     "signer": "ed25519",
     "chunk_chars": 512,
     "chunk_overlap": 64,

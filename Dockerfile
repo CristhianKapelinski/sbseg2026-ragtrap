@@ -19,12 +19,13 @@ COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 RUN pip install --upgrade pip && pip install ".[data]"
 
-# Tests and the rest of the tree for in-container verification and experiments.
+# Tests, scripts, and the frozen checksum-pinned BEIR sample (for the fast E3 path).
 COPY tests ./tests
 COPY scripts ./scripts
+COPY data ./data
 
 # Experiments write to these mounted directories.
-RUN mkdir -p results logs data
+RUN mkdir -p results logs
 
 # Default: E0 instrument validation (the deterministic correctness property; CPU-only).
 ENTRYPOINT ["ragtrap"]

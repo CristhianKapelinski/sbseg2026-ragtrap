@@ -36,6 +36,12 @@ POISONEDRAG_SHA256 = {
 RAGORIGIN_FEEDBACK_SHA256 = (
     "658419c9411ee68571c15174e6ceaed3ea24f9912bef8ed5a805a44638fde3b6"
 )
+# Frozen BEIR/nq passage sample shipped in the repo (data/beir_nq_sample.parquet): the first
+# 1,500 passages of the BeIR/nq corpus, in file order, so the fast E3 false-purge contrast runs
+# offline and deterministically. The full 2,681,468-passage corpus is fetched only by --full.
+BEIR_NQ_SAMPLE_SHA256 = (
+    "b31332809dbc08cea7bb90e82a325e01928b85ae507682cce42b0f44d75a7c41"
+)
 
 
 class DataIntegrityError(RuntimeError):
