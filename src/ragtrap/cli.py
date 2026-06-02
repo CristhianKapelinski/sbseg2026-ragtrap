@@ -37,6 +37,24 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def _flush_and_exit(code: int) -> None:
+    """Flush all streams and logging handlers, then exit hard.
+
+    The Hugging Face ``datasets``/``pyarrow`` native stack can raise a benign thread-state error
+    during CPython interpreter finalization on this platform, *after* all outputs are written.
+    Flushing then calling ``os._exit`` skips those buggy native finalizers so a successful run
+    returns a clean exit code; no application cleanup is pending at this point because every
+    output file has already been written and closed.
+    """
+    import logging
+    import os
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+    logging.shutdown()
+    os._exit(code)
+
+
 def cmd_run_experiments(args: argparse.Namespace) -> int:
     cfg = load_config()
     cfg.ensure_dirs()
@@ -63,9 +81,12 @@ def cmd_run_experiments(args: argparse.Namespace) -> int:
     if isinstance(corpus_note, dict) and corpus_note.get("clean_chunks"):
         manifest.add_input(
             "beir_nq_subset",
-            digest="see-corpus_note",
+            digest=str(corpus_note.get("passage_text_sha256", "")),
             description="BEIR nq passage subset (real public)",
-            **corpus_note,
+            passage_cap=corpus_note.get("passage_cap"),
+            passages_loaded=corpus_note.get("passages_loaded"),
+            hf_revision=corpus_note.get("hf_revision"),
+            clean_chunks=corpus_note.get("clean_chunks"),
         )
 
     results_path = cfg.results_dir / "results.json"
@@ -78,7 +99,9 @@ def cmd_run_experiments(args: argparse.Namespace) -> int:
     print(f"results: {results_path}")
     print(f"manifest: {manifest_path}")
     print(f"log: {log_path}")
-    return 0
+    # Bypass the native-extension finalizer race (see _flush_and_exit) on a successful run.
+    _flush_and_exit(0)
+    return 0  # unreachable; kept for type-checkers
 
 
 def cmd_selftest(args: argparse.Namespace) -> int:

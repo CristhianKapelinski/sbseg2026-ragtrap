@@ -32,3 +32,8 @@ keys/
 *.swp
 .idea/
 .vscode/
+
+# Internal planning notes (Portuguese, non-anonymous): kept local, not part of the artifact
+DOSSIER.md
+PLAN.md
+RESEARCH.md

@@ -22,6 +22,7 @@ from .corpus import (
     passages_to_chunks,
 )
 from .gate import ingest, ingest_per_document, verify_record
+from .hashing import sha256_text
 from .logging_setup import get_logger
 from .records import Chunk, StorageStats
 from .revocation import manual_purge, revoke_source
@@ -105,12 +106,14 @@ def _load_real_or_note(cfg: Config) -> tuple[list[Chunk], dict[str, object]]:
         cap=cfg.beir_passage_cap, dataset=cfg.beir_dataset, hf_revision=cfg.hf_revision
     )
     clean = passages_to_chunks(passages, chunk_chars=cfg.chunk_chars, overlap=cfg.chunk_overlap)
+    passage_digest = sha256_text("\n".join(text for _, _, text in passages))
     note = {
         "corpus": f"BEIR/{cfg.beir_dataset} (real public)",
         "passage_cap": cfg.beir_passage_cap,
         "passages_loaded": len(passages),
         "hf_revision": cfg.hf_revision,
         "clean_chunks": len(clean),
+        "passage_text_sha256": passage_digest,
     }
     return clean, note
 
