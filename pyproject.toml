@@ -12,31 +12,32 @@ license = { text = "MIT" }
 keywords = ["rag", "provenance", "ed25519", "supply-chain", "poisoning", "traceback"]
 authors = [{ name = "RAGtrap authors" }]
 
-# Pinned, bounded dependency ranges. The runnable core (signing, datastore,
-# traceback, revocation, the constant-time experiments) depends only on
-# `cryptography`. The `data` extra fetches the BEIR corpus and third-party
-# attack files; the `eval` extra adds the dense retriever and the local LLM that
-# serves the RAGForensics judge baseline and the attack-success measurement.
+# Pinned, bounded dependency ranges. The fast/minimal path (signing, datastore,
+# traceback, revocation, the deterministic constant-time experiments, and loading
+# the shipped sample + the small third-party attack files) needs only `cryptography`
+# plus the lightweight `datasets`/`pyarrow` loaders, so these are the default
+# dependencies installed by a plain `uv sync`. The heavy `eval` extra (dense
+# retriever + local LLM that serves the RAGForensics judge baseline and the
+# attack-success measurement) is opt-in and only needed for the full run.
 dependencies = [
     "cryptography>=42.0",
+    "datasets>=2.18",
+    "huggingface-hub>=0.23",
+    "pyarrow>=15.0",
 ]
 
 [project.optional-dependencies]
-data = [
-    "datasets>=2.18",
-    "huggingface-hub>=0.23",
-    "pyarrow>=15.0",
-]
+# `uv sync --extra eval` (or the --full reproduction) adds the GPU-served baselines.
 eval = [
-    "datasets>=2.18",
-    "huggingface-hub>=0.23",
-    "pyarrow>=15.0",
     "torch>=2.4",
     "transformers>=4.44",
     "sentence-transformers>=3.0",
     "scipy>=1.11",
     "accelerate>=0.30",
 ]
+
+# Dev tooling (tests, linter) is installed by default via `uv sync`.
+[dependency-groups]
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",

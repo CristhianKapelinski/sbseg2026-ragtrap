@@ -1,7 +1,7 @@
 {
   "mode": "fast",
   "environment": {
-    "python": "3.12.3",
+    "python": "3.13.12",
     "platform": "Linux-6.17.0-29-generic-x86_64-with-glibc2.39"
   },
   "data": {
@@ -26,7 +26,7 @@
     "drift_recall_0.0": 1.0,
     "drift_recall_0.3": 0.702,
     "drift_recall_0.5": 0.508,
-    "ragtrap_per_suspect_us": 89.107,
+    "ragtrap_per_suspect_us": 97.385,
     "ragtrap_work_units": 1000,
     "ragtrap_model_calls": 0,
     "n_suspects": 1000,
@@ -99,9 +99,9 @@
         "ci_high": 0.9999999999999999
       },
       "work_units": 1000,
-      "latency_s_min": 0.08910673798527569,
-      "latency_s_mean": 0.11179355455678888,
-      "latency_s_per_suspect_us": 89.10673798527569,
+      "latency_s_min": 0.09738492500036955,
+      "latency_s_mean": 0.12427984089008533,
+      "latency_s_per_suspect_us": 97.38492500036955,
       "repeats": 20
     },
     "drift_0.3": {
@@ -157,9 +157,9 @@
         "ci_high": 0.7404274618489985
       },
       "work_units": 1000,
-      "latency_s_min": 0.07329946500249207,
-      "latency_s_mean": 0.09813740454846993,
-      "latency_s_per_suspect_us": 73.29946500249207,
+      "latency_s_min": 0.08414281706791371,
+      "latency_s_mean": 0.10614533411571755,
+      "latency_s_per_suspect_us": 84.14281706791371,
       "repeats": 20
     },
     "drift_0.5": {
@@ -215,9 +215,9 @@
         "ci_high": 0.5515929877240316
       },
       "work_units": 1000,
-      "latency_s_min": 0.06911784899421036,
-      "latency_s_mean": 0.0789575033937581,
-      "latency_s_per_suspect_us": 69.11784899421036,
+      "latency_s_min": 0.06709112098906189,
+      "latency_s_mean": 0.08294310640194454,
+      "latency_s_per_suspect_us": 67.09112098906189,
       "repeats": 20
     }
   },
@@ -258,5 +258,5 @@
     "poison_pool_sha256_pinned": "44df711454a9bada08e72e9e4a003a2cc845c43707ac93a3493e5168ec415cf2",
     "beir_sample_sha256_pinned": "b31332809dbc08cea7bb90e82a325e01928b85ae507682cce42b0f44d75a7c41"
   },
-  "fast_seconds": 9.0
+  "fast_seconds": 9.6
 }

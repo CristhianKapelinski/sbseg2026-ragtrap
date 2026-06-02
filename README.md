@@ -1,231 +1,168 @@
-# RAGtrap
+# RAGtrap: Per-Chunk Signed Provenance with Constant-Time Traceback and One-Command Source Revocation for RAG Ingestion
 
-**Per-chunk signed provenance with constant-time traceback and one-command source revocation for
-RAG ingestion pipelines.** Artifact for the paper of the same name.
+RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora**. RAG pipelines ground a language model on passages ingested from untrusted web and document sources with no trust check at admission, so corpus poisoning is cheap and effective; once a source is found compromised, the operator faces an unsolved problem: how to purge that source cleanly without rescanning the corpus or deleting benign content. RAGtrap records, for each ingested chunk, a cryptographically signed (real Ed25519) provenance record — source URI, principal, content hash, detector verdicts, timestamp — natively in the vector store. Revocation then removes **exactly** the compromised source's chunks at a false-purge rate of **0.00 vs 0.52** for document-level purging; traceback becomes **one O(1) content-hash lookup with 0 model calls**, matching two forensic baselines that pay 1000–2000 model calls (**~16,000x** lower latency on the full attack); and one-command revocation gives a **16,931x** mean-time-to-remediation advantage on the full 2,681,468-passage corpus.
 
-RAGtrap is an ingestion gate for retrieval-augmented-generation (RAG) corpora. For each ingested
-chunk it writes a cryptographically signed provenance record (source URI, principal, chunk content
-hash, detector verdicts, timestamp) natively into the vector store. This turns poisoning traceback
-into a constant-time signature-keyed lookup and enables one-command revocation that batch-purges
-every chunk attributable to a compromised source.
+> **Paper:** *RAGtrap: Per-Chunk Signed Provenance with Constant-Time Traceback and One-Command Source Revocation for RAG Ingestion* — SBRC 2026 Salão de Ferramentas.
+
+> **For SBRC 2026 artifact reviewers (SeloD/F/S/R).** This README is the single, self-contained guide for evaluation: follow it end-to-end and you reach all four seals. Other Markdown files (`DOCUMENTATION.md`) are complementary documentation and are **not required** for the artifact review.
 
 ---
 
-## QUICKSTART (copy-paste, ~3 min, no GPU, no model, deterministic)
+## README Structure
 
-You have already cloned this repository. From its root, run exactly one command:
-
-```bash
-bash scripts/reproduce.sh
-```
-
-That single command: (1) creates a `.venv` and installs the package, (2) **auto-fetches and
-checksum-pins** the two small third-party inputs (no manual download, no config edit), and
-(3) reproduces the paper's three headline numbers into `results/main_results.json`. On a typical
-laptop the whole thing finishes in **~3 minutes** (most of it is `pip install`; the computation
-itself is ~10 s). It needs network once (to fetch the inputs) and nothing else.
-
-Expected `results/main_results.json` `.headline` (these map one-to-one to the paper):
-
-| Field | Value | Paper number |
-|-------|-------|--------------|
-| `false_purge_per_document` | **0.52** | per-document revocation over-purges clean content (E3) |
-| `false_purge_per_chunk` | **0.00** | RAGtrap per-chunk revocation never over-purges (E3) |
-| `drift_recall_0.0` / `0.3` / `0.5` | **1.00 / 0.70 / 0.51** | recall under post-ingestion drift (E2 drift split) |
-| `ragtrap_per_suspect_us` | ~80-110 us | constant-time traceback (timing; varies slightly) |
-| `ragtrap_work_units` | **1000** | one O(1) lookup per suspect |
-| `ragtrap_model_calls` | **0** | traceback needs no model |
-
-The structural quantities (`false_purge_*`, `drift_recall_*`, `work_units`, `model_calls`) are
-**exact and deterministic** (fixed seeds, pinned inputs). Only the wall-clock latency
-(`ragtrap_per_suspect_us`) is a timing measurement and varies a little between machines.
-
-Inspect the headline at any time:
-
-```bash
-python -c "import json; print(json.dumps(json.load(open('results/main_results.json'))['headline'], indent=2))"
-```
-
-### Full reproduction (slow, opt-in, needs a GPU)
-
-The fast quickstart above is model-free. The published **LLM-judge baseline** comparison and the
-**full 2.68M-passage scaling sweep** are slow and need a model download + a GPU; they are behind an
-explicit flag:
-
-```bash
-bash scripts/reproduce.sh --full          # ~60-90 min: + LLM-judge + RAGOrigin baselines, full-corpus scaling sweep, E5
-REPRODUCE_FULL=1 bash scripts/reproduce.sh  # identical to --full
-
-bash scripts/reproduce.sh --full --quick  # ~10-15 min: judge baseline on a ~15-question subset (sanity check)
-```
-
-`--full` downloads the model (~6 GB) and the BEIR/nq corpus parquet (~764 MB) once, then refreshes
-`results/results.json` and `paper/macros.tex`. `--quick` runs the LLM judge on a small question
-subset so the baseline comparison can be confirmed fast without the long full run.
-
-| Command | Time | Needs | Reproduces |
-|---------|------|-------|------------|
-| `bash scripts/reproduce.sh` | **~3 min** | CPU only, network once | headline: false-purge 0.00/0.52, drift 1.00/0.70/0.51, O(1) traceback |
-| `bash scripts/reproduce.sh --full --quick` | ~10-15 min | 1 GPU, model + corpus download | above + LLM-judge baseline on a question subset |
-| `bash scripts/reproduce.sh --full` | ~60-90 min | 1 GPU, model + corpus download | every paper number (E1-E5, full scaling sweep) |
-
-Heavy data (corpus, models, cloned repos) is written under `$RAGTRAP_DATA_ROOT`
-(default `/mnt/win_ssd/sbseg-work/ragtrap`), keeping the repository to code, the frozen sample,
-results, and docs. Override it with `RAGTRAP_DATA_ROOT=/path bash scripts/reproduce.sh`.
+| Section | Description |
+|---|---|
+| [Considered Seals](#considered-seals) | SBRC quality seals targeted by this artifact |
+| [Basic Information](#basic-information) | Hardware, OS, and software environment |
+| [Dependencies](#dependencies) | Key pinned packages and how third-party inputs are fetched |
+| [Security Concerns](#security-concerns) | What runs locally, where keys/data live, network use |
+| [Installation](#installation) | Clone, install uv, `uv sync` |
+| [Minimal Test](#minimal-test) | One-command end-to-end functional check (~1 s) |
+| [Experiments](#experiments) | Reproduction of the paper's four claims (E1–E4) |
+| [License](#license) | Licensing information |
 
 ---
 
-## Repo map
+## Considered Seals
 
-```
-src/ragtrap/        Packaged source, one module per concern
-  config.py           Environment-driven configuration (nothing hardcoded)
-  logging_setup.py    Console + logs/run-<timestamp>.log logging subsystem
-  hashing.py          Canonical SHA-256 helpers
-  signing.py          Ed25519 (real) and HMAC (stand-in) backends
-  records.py          Per-chunk provenance schema + canonical signed message
-  detectors.py        Best-effort ingestion-time detectors (complementary, not a claim)
-  datastore.py        Vector-store-native signed-record index (O(1) traceback)
-  gate.py             Ingestion gate; per-chunk and per-document configurations
-  traceback.py        Constant-time signature-keyed lookup
-  revocation.py       Batch revoke-source + manual-purge baseline
-  synthetic.py        Labelled synthetic corpus generator (E0)
-  corpus.py           BEIR nq passage loader (clean substrate)
-  realdata.py         Third-party PoisonedRAG / RAGOrigin loaders + pinned SHA-256 digests
-  llm_judge.py        Published RAGForensics judge prompt, served by a local model (--full only)
-  realeval.py         E2 traceback head-to-head (RAGtrap O(1) vs LLM judge) + drift split
-  realeval3.py        E3 per-chunk vs per-document granularity on real partially-poisoned docs
-  scaling.py          E2/E4 MTTR + ingestion overhead on the full 2.68M-passage corpus
-  asr.py              E5 end-to-end attack-success positioning (--full only)
-  stats.py            Wilson score + bootstrap confidence intervals
-  manifest.py         Run manifest (inputs pinned by content digest)
-  experiments.py      E0 instrument validation
-  cli.py              Console entry point `ragtrap`
-data/
-  beir_nq_sample.parquet   Frozen BEIR/nq passage sample (1,500 passages), checksum-pinned
-tests/              Unit tests (no network, no GPU)
-scripts/
-  reproduce.sh          THE one-command entry point (fast default; --full / --quick)
-  reproduce_main.py     Reproduction driver (fast model-free path + --full)
-  fetch_inputs.py       Auto-fetch + checksum-pin the third-party inputs
-  run_real_eval.py      E2 full head-to-head incl. LLM-judge baseline (--full)
-  run_scaling.py        E2/E4 full-corpus scaling sweep (--full)
-  run_e0_e3_e5.py       E0/E3/E5 on the full corpus (--full)
-  run_ragorigin_baseline.py  RAGOrigin proxy-loss baseline (--full)
-  aggregate_results.py  Aggregate every output into results/results.json + paper/macros.tex
-  fetch_data.py         Legacy full fetcher (kept; fetch_inputs.py is the lighter default)
-results/            main_results.json (fast headline), results.json + *_results.json (full), macros.tex
-Dockerfile          Reproducible image
-DOCUMENTATION.md    Problem, contribution, design, per-experiment real outputs
-LICENSE             MIT
-```
+The seals considered are: **Available (SeloD)**, **Functional (SeloF)**, **Sustainable (SeloS)**, and **Reproducible (SeloR)**.
 
-## Badges claimed
+- **Available (SeloD):** self-contained public repository under the MIT license, with a pinned dependency set ([`pyproject.toml`](pyproject.toml) + [`uv.lock`](uv.lock)). Every input is public and third-party, fetched and checksum-pinned at run time; the clean BEIR substrate for the fast path ships frozen in [`data/`](data/).
+- **Functional (SeloF):** one command — [`scripts/minimal_test.sh`](scripts/minimal_test.sh) — runs the real signing → O(1) traceback → revoke-source pipeline end to end and the 30-test unit suite (no network, no GPU), asserting `instrument_valid: true`.
+- **Sustainable (SeloS):** `src/` layout, one module per concern (23 modules under [`src/ragtrap/`](src/ragtrap/): `gate`, `signing`, `datastore`, `traceback`, `revocation`, `realeval`, `scaling`, …), type hints, docstrings, 30 unit tests, ruff-clean; all behaviour is environment-driven (`RAGTRAP_*`), nothing is hardcoded.
+- **Reproducible (SeloR):** the default experiment is **deterministic** (fixed seeds) and **model-free**; every third-party input is pinned by SHA-256 ([`src/ragtrap/realdata.py`](src/ragtrap/realdata.py)) and the frozen BEIR sample ships in `data/`, so a reviewer reaches the exact headline numbers (false-purge 0.00/0.52, drift 1.00/0.70/0.51) with one command and zero manual work.
 
-- **Available (Disponivel)**: self-contained public repository, MIT licence, pinned dependency set;
-  every input is public and third-party, fetched and checksum-pinned by the reproduce script.
-- **Functional (Funcional)**: `bash scripts/reproduce.sh` runs the real signing/traceback/revocation
-  pipeline end to end and emits the headline numbers; `ragtrap selftest` and the unit tests
-  (`python -m pytest`, no network/GPU) exercise the same code paths.
-- **Sustainable (Sustentavel)**: `src/` layout, one module per concern, type hints, docstrings, 30
-  unit tests, ruff-clean, pinned `pyproject.toml`; all behaviour is environment-driven, nothing is
-  hardcoded.
-- **Reproducible (Reprodutivel)**: the default quickstart is **deterministic** (fixed seeds) and
-  **model-free**; every third-party input is pinned by SHA-256 (`src/ragtrap/realdata.py`) and the
-  frozen BEIR sample ships in `data/`, so a reviewer reaches the exact headline numbers
-  (false-purge 0.00/0.52, drift 1.00/0.70/0.51) with one copy-paste command and zero manual work.
-  Wall-clock latencies vary slightly between machines; the structural quantities are stable.
+---
 
-## Basic information
+## Basic Information
 
-- **Operating system**: Linux (x86_64).
-- **Runtime**: Python >= 3.10 (validated on 3.12).
-- **Hardware**: the **fast quickstart is CPU-only** (no GPU). The `--full` LLM-judge baseline (E2),
-  the RAGOrigin proxy baseline, and the attack-success context (E5) use a single CUDA GPU to serve
-  a local model.
-- **Disk / RAM**: the fast path needs ~300 MB (venv + the shipped 337 KB sample). `--full` adds
-  ~764 MB for the BEIR corpus parquet and a few GB for the local model; the full-corpus scaling
-  point builds ~4.4M signed records and uses up to ~10 GB RAM.
-- **Network**: required once, to fetch the two small third-party files (fast path) or additionally
-  the corpus + model (`--full`).
+| | |
+|---|---|
+| **OS** | Linux (x86_64); validated on Ubuntu/Debian, kernel 6.17 |
+| **Python** | 3.10+ (validated on 3.12.3), managed by [`uv`](https://astral.sh/uv) |
+| **RAM** | Fast path: < 1 GB. Full `--full` scaling point builds ~4.4M signed records and uses up to ~10 GB |
+| **Disk** | `.venv` after `uv sync`: ~333 MB; fast path adds nothing (337 KB sample ships in git). `--full` adds ~764 MB (BEIR corpus) + a few GB (local model) under `$RAGTRAP_DATA_ROOT` |
+| **GPU** | **Not required** for the minimal test or the main claim. Only the `--full` model-served baselines (E2 LLM judge / RAGOrigin proxy, E4 generation) use a single CUDA GPU |
+| **Reference machine** | AMD Ryzen / Intel x86_64, 32 GB RAM, Python 3.12.3, no GPU — minimal test ~1 s, fast main experiment ~10 s |
 
-## Dependencies (pinned ranges, from PyPI)
+---
 
-Declared in `pyproject.toml`; installed by the reproduce script (no manual step):
+## Dependencies
 
-- Core: `cryptography` (real Ed25519 signing).
-- `.[data]` (fast path): `datasets`, `huggingface-hub`, `pyarrow` (loads the shipped sample +
-  third-party attack files). `pip install -e ".[data,dev]"`.
-- `.[eval]` (`--full`): the above plus `torch`, `transformers`, `sentence-transformers`, `scipy`,
-  `accelerate` (dense retriever + local judge/generation model + Wilson/bootstrap CIs).
-- `.[dev]`: `pytest`, `ruff`.
+All packages are pinned in [`pyproject.toml`](pyproject.toml) / [`uv.lock`](uv.lock) and installed by `uv sync` (no manual step):
 
-Third-party data is obtained, not vendored, and pinned by SHA-256 at fetch time:
-- RAGOrigin attack-feedback: `github.com/zhangbl6618/RAG-Responsibility-Attribution` (shallow clone).
-- PoisonedRAG `nq.json`: `github.com/sleeepeer/PoisonedRAG` (sparse blobless clone).
-- BEIR/nq corpus (`--full` only): Hugging Face `BeIR/nq`.
-The clean BEIR substrate for the fast path is the frozen, checksum-pinned `data/beir_nq_sample.parquet`.
+- **Core / fast path:** `cryptography` (real Ed25519 signing), `datasets`, `huggingface-hub`, `pyarrow` (loads the shipped sample and the small third-party attack files).
+- **Dev (installed by default):** `pytest`, `ruff`.
+- **`eval` extra (`--full` only):** `torch`, `transformers`, `sentence-transformers`, `scipy`, `accelerate` — the dense retriever plus the local model that serves the LLM-judge / proxy baselines. Installed with `uv sync --extra eval`.
 
-## Security concerns
+**Third-party inputs are obtained, not vendored, and pinned by SHA-256 at fetch time** (by `uv run python scripts/fetch_inputs.py`, called automatically by the experiment script):
 
-- The artifact runs only its own code plus the listed PyPI dependencies and the cloned baseline
-  code; corpus text is hashed, signed, indexed, and compared as data, **never executed**.
-- The Ed25519 **private key is generated per run and never written to disk**; only the non-secret
-  public key identity is logged and recorded in the manifest. `.gitignore` excludes `*.key`.
-- The HMAC backend exists only to quantify the cost of real public-key signing (E4); it is not a
-  deployment mode (its verifier must hold the secret key).
-- No credentials are required: the `--full` baseline judge runs against a local open model on the
-  GPU; the fast path makes no model calls.
+- RAGOrigin attack-feedback (labelled suspects + baseline substrate): `github.com/zhangbl6618/RAG-Responsibility-Attribution` (shallow clone, ~6 MB).
+- PoisonedRAG `nq.json` (the attack): `github.com/sleeepeer/PoisonedRAG` (sparse blobless clone, ~120 KB).
+- BEIR/nq corpus (`--full` only, ~764 MB): Hugging Face `BeIR/nq`.
+
+The clean BEIR substrate for the fast path is the frozen, checksum-pinned `data/beir_nq_sample.parquet` already in the repository, so the fast path's only network use is the two small clones above.
+
+---
+
+## Security Concerns
+
+- The artifact runs **only locally** — its own code plus the listed PyPI packages and the two cloned baseline repositories; corpus text is hashed, signed, indexed, and compared as data, **never executed**.
+- The Ed25519 **private key is generated per run and never written to disk**; only the non-secret public-key identity is logged and recorded in the manifest. `.gitignore` excludes `*.key`.
+- **No credentials are required.** The `--full` baseline judge runs against a local open model on the GPU; the fast path makes no model calls and no API calls.
+- **Network** is used once, only to fetch the two small third-party files (fast path) or additionally the corpus + model (`--full`). Heavy data lives under `$RAGTRAP_DATA_ROOT` (default `/mnt/win_ssd/sbseg-work/ragtrap`), never inside the repository.
+
+---
 
 ## Installation
 
-The quickstart does this for you. To do it by hand (e.g. to run the tests):
-
 ```bash
-python3 -m venv .venv && . .venv/bin/activate    # ~5 s
-pip install -e ".[data,dev]"                      # ~2 min
+# 1. Clone the repository
+git clone https://github.com/CristhianKapelinski/sbseg2026-ragtrap.git
+cd sbseg2026-ragtrap
+# <!-- TODO(double-blind): swap to anonymized mirror -->
+
+# 2. Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 3. Install pinned dependencies (creates .venv from uv.lock)
+uv sync
 ```
 
-## Minimal end-to-end test (~10 s)
+`uv sync` took **~14.5 s** on the reference machine with a cold uv cache (downloading wheels) and **~1.5 s** to rebuild the environment with a warm cache. Every command below is run as `uv run <...>`; no `pip`, `venv`, or `requirements.txt` is involved.
 
-A real signing -> traceback -> revoke demo, and the instrument self-test, plus the unit suite:
+---
 
-```bash
-ragtrap demo            # ~1 s : ingest -> O(1) traceback -> one-command revoke-source on a synthetic corpus
-ragtrap selftest        # ~1 s : E0 instrument validation; prints JSON, exits 0 on success
-python -m pytest -q     # ~8 s : 30 unit tests, no network, no GPU
-```
+## Minimal Test
 
-Expected: `selftest` prints `"instrument_valid": true`; `demo` prints the ingested/suspect counts,
-that traceback attributed every suspect via O(1) lookup, and the number of chunks purged by one
-`revoke-source`; pytest reports `30 passed`.
-
-## Experiments: claims to outputs
-
-The **main claim** is the recovery-layer contrast reproduced by the fast quickstart and written to
-`results/main_results.json`. The slower model-served experiments are `--full` fields of
-`results/results.json`. State per experiment: ID, claim, output field, resources, runtime, expected.
-
-| ID | Claim | Output | Resources | Runtime | Expected |
-|----|-------|--------|-----------|---------|----------|
-| E0 | The instrument is correct (verify, tamper-detect, attribute, revoke). | `main_results.json.E0` | CPU, synthetic | ~1 s | `instrument_valid: true` |
-| **E3 (main)** | Per-chunk granularity eliminates false purges vs per-document, on real partially-poisoned documents (with CIs). | `main_results.json.headline.false_purge_*` | CPU, frozen BEIR sample + PoisonedRAG | ~1 s | per-chunk **0.00**, per-document **0.52** |
-| **E2 (main)** | Traceback is one constant-time lookup at zero model-call cost; recall degrades honestly under post-ingestion drift while precision stays exact. | `main_results.json.headline.drift_recall_*`, `ragtrap_*` | CPU, RAGOrigin feedback | ~7 s | drift **1.00 / 0.70 / 0.51**; **0** model calls |
-| E2-full | Same traceback matched head-to-head against the published RAGForensics LLM judge + RAGOrigin proxy baseline on identical suspects, orders of magnitude faster. | `results.json.E1_real` | GPU (judge), corpus | ~30-60 min (`--full`) | judge recall ~0.96 at ~1.6 s/suspect vs RAGtrap ~100 us/suspect |
-| E2/E4 | One-command revocation MTTR advantage grows with corpus size, to the full 2.68M-passage corpus; real Ed25519 per-chunk signing stays practical (~1.9x HMAC). | `results.json.scaling` | CPU, full BEIR corpus | ~20-30 min (`--full`) | MTTR ratio grows into the thousands; Ed25519 ~1.9x HMAC |
-| E5 | The attributed suspects genuinely fool the pipeline (attack-success context). | `results.json.aux.E5` | GPU (generation) | ~5 min (`--full`) | ASR ~0.98 |
-
-Exact numbers (with 95% Wilson CIs and N) for the full run are in `results/results.json` and
-surfaced in `paper/macros.tex`; per-experiment captured outputs and interpretation are in
-`DOCUMENTATION.md`.
-
-## Docker
+One command (~1 s, no network, no GPU). It exercises the real pipeline end to end — sign every chunk, reject a tampered message, attribute suspects by O(1) lookup, revoke exactly one principal's chunks with no collateral — plus a concrete ingest→traceback→revoke demo and the unit suite:
 
 ```bash
-docker build -t ragtrap .                                    # ~3 min
-docker run --rm -v "$PWD/results:/app/results" ragtrap ragtrap selftest
+./scripts/minimal_test.sh
 ```
+
+**Expected output:** the selftest prints JSON ending in `"instrument_valid": true`; the demo prints `ingested chunks: 100`, `traceback attributed 10 suspects via O(1) lookup`, and `revoke-source attacker-0: purged 10 chunks (100 -> 90)`; the suite reports `30 passed`; the final line is `MINIMAL TEST: PASSED`. **Measured on the reference machine: ~1 s.**
+
+---
+
+## Experiments
+
+The paper has four experiments (E1–E4). The **main claim is E3** (surgical revocation: per-chunk vs document-level false purge — the lead result delivering contribution C1), reproduced together with E2 by the fast, model-free [`scripts/experiment_main.sh`](scripts/experiment_main.sh) into `results/main_results.json`.
+
+Each claim below is **one command** and defaults to a **fast variant**. The slow, GPU + model-served full run is gated behind `--full`; a reviewer who does not run it may instead inspect the pre-computed, real outputs already committed under [`results/`](results/) (`results.json`, `*_results.json`, `macros.tex`).
+
+> Run the fast main experiment once; it produces the headline used by E2 and E3 below:
+> ```bash
+> ./scripts/experiment_main.sh
+> ```
+> **Measured on the reference machine: ~10 s** (CPU only; the one-time ~6 MB input fetch is included). Writes `results/main_results.json`.
+
+### E1 — Instrument validation (the gate, signature, and revocation index are correct)
+
+- **Description:** on a 200-chunk labelled corpus, all signed records verify, a tampered message is rejected, traceback attributes every suspect by O(1) lookup, and `revoke-source` purges exactly the targeted principal's 20 chunks with no collateral.
+- **Execution:**
+  ```bash
+  uv run ragtrap selftest
+  ```
+- **Expected time:** ~1 s. **Expected resources:** CPU only, < 200 MB RAM, no network.
+- **Expected result:** JSON with `"instrument_valid": true` (`tamper_detected: true`, `purged_exactly_target: true`, `no_collateral_purge: true`).
+
+### E2 — Forensic-time attribution and drift sensitivity
+
+- **Description:** on the real PoisonedRAG attack over Natural Questions, RAGtrap attributes 1000 identical suspects (500 poison / 500 clean) with one content-hash lookup and **0 model calls**, matching two model-served forensic baselines on accuracy. Because matching is exact, recall degrades honestly under post-ingestion drift while precision stays exact.
+- **Execution (fast, from the main experiment above):**
+  ```bash
+  uv run python -c "import json;h=json.load(open('results/main_results.json'))['headline'];print({k:h[k] for k in ('drift_recall_0.0','drift_recall_0.3','drift_recall_0.5','ragtrap_per_suspect_us','ragtrap_work_units','ragtrap_model_calls')})"
+  ```
+- **Expected time:** instant (reads the fast main result). **Expected resources:** CPU only.
+- **Expected result:** drift recall **1.00 / 0.70 / 0.51** at p = 0.0 / 0.3 / 0.5; per-suspect latency ~80–110 µs; 1000 work units; **0 model calls**.
+- **Full variant (`--full`, GPU + model, ~30–60 min):** `./scripts/experiment_main.sh --full` runs the published RAGForensics LLM-judge and RAGOrigin proxy baselines on the identical suspects. Measured (stored in `results/real_results.json`): judge recall **0.96** at **1.65 s/suspect** (1000 model calls); RAGOrigin recall **1.00** at 64.5 ms/suspect (2000 calls); RAGtrap **101.7 µs/suspect**, 0 calls → **16,274x** faster than the judge, **634x** faster than the proxy.
+
+### E3 — Surgical revocation, then MTTR at corpus scale (MAIN CLAIM)
+
+- **Description:** for real NQ passages each injected with PoisonedRAG passages under one principal, document-level purging over-purges clean fragments while RAGtrap's per-chunk scheme removes exactly the poisoned chunks; the one-command revocation MTTR advantage grows with corpus size up to the full 2,681,468-passage corpus.
+- **Execution (fast, from the main experiment above):**
+  ```bash
+  uv run python -c "import json;h=json.load(open('results/main_results.json'))['headline'];print('per-document FP',h['false_purge_per_document'],'| per-chunk FP',h['false_purge_per_chunk'])"
+  ```
+- **Expected time:** instant (reads the fast main result; the fast run that produced it is ~10 s). **Expected resources:** CPU only, < 1 GB RAM.
+- **Expected result:** false-purge **per-document 0.52** (95% Wilson CI [0.49, 0.55]) vs **per-chunk 0.00**.
+- **Full variant (`--full`, ~20–30 min, CPU):** the scaling sweep in `./scripts/experiment_main.sh --full`. Measured (stored in `results/scaling_results.json`): on the full 4,364,162-chunk corpus, `revoke-source` purges in **46.2 µs** vs a **782 ms** manual scan — a **16,931x** MTTR advantage that grows with corpus size (44x → 627x → 6977x → 16931x); real Ed25519 per-chunk signing is ~69–90 µs/chunk, ~1.9x the symmetric HMAC stand-in.
+
+### E4 — Attack-success context (the suspects are genuinely harmful)
+
+- **Description:** feeding the top-5 retrieved contexts to a local generation model steers it to the attacker's target answer, confirming the attributed suspects are dangerous.
+- **Execution (`--full` only, GPU, ~5 min):**
+  ```bash
+  ./scripts/experiment_main.sh --full
+  ```
+- **Expected time:** part of the ~60–90 min full run. **Expected resources:** 1 CUDA GPU (local generation model).
+- **Expected result:** attack-success rate **98%** (95% Wilson CI [0.93, 0.99]) over 100 questions, with a 0% correct-answer rate. Measured value stored in `results/aux_results.json`.
+
+Exact numbers (with 95% Wilson CIs and N) for the full run are in [`results/results.json`](results/results.json) and surfaced in [`results/macros.tex`](results/macros.tex); per-experiment captured outputs and interpretation are in [`DOCUMENTATION.md`](DOCUMENTATION.md).
+
+---
 
 ## License
 
-MIT. See `LICENSE`.
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for the full text.
