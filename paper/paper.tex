@@ -6,7 +6,10 @@
 \usepackage[utf8]{inputenc}
 \usepackage{enumitem}
 \usepackage{array}
+\usepackage{tabularx}
 \usepackage{booktabs}
+% ragged left-aligned X column for free-text cells in tabularx
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{xcolor}
@@ -260,10 +263,10 @@ artifact.
 \footnotesize
 \setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{0.9}
-\begin{tabular}{@{}lcccccc@{}}
+\begin{tabularx}{\textwidth}{@{}Lcccccc@{}}
 \toprule
- & Ingest & Per- & Real & Sig.\ & Source & Oper.\\
-Work & gate & chunk & sig. & traceback & revoke & eval \\
+Work & Ingest & Per- & Real & Sig.\ & Source & Oper.\\
+     & gate & chunk & sig. & traceback & revoke & eval \\
 \midrule
 RAGForensics~\cite{ragforensics}  & \xmark & \cmark & \xmark & \xmark & \xmark & \cmark \\
 RAGOrigin~\cite{ragorigin}        & \xmark & \cmark & \xmark & \xmark & \xmark & \cmark \\
@@ -279,7 +282,7 @@ MerkleSpeech~\cite{MerkleSpeech}  & \cmark & \cmark & \cmark & \xmark & \xmark &
 Poison Forensics~\cite{poison-forensics} & \xmark & \xmark & \xmark & \xmark & \xmark & \cmark \\
 \textbf{\sysname{}}               & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 Columns of Table~\ref{tab:related}, left to right, are: an ingestion-time gate,
@@ -369,7 +372,7 @@ under test.
 \footnotesize
 \setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{0.9}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{1.7cm}>{\raggedright\arraybackslash}p{1.3cm}>{\raggedright\arraybackslash}p{2.0cm}@{}}
+\begin{tabularx}{\textwidth}{@{}>{\hsize=1.32\hsize}L>{\hsize=1.28\hsize}L>{\hsize=0.55\hsize}L l>{\hsize=0.85\hsize}L@{}}
 \toprule
 Dataset & Contents & Size & License & Obtained \\
 \midrule
@@ -377,7 +380,7 @@ BEIR \texttt{nq} \cite{beir,naturalquestions} & Wikipedia passages, our clean su
 PoisonedRAG \texttt{nq} \cite{poisonedrag} & Adversarial passages, 100 questions, 5 each & 500 passages & MIT & Released attack repo \\
 RAGOrigin feedback \cite{ragorigin} & \texttt{e5}-retrieved contexts per question, poison/clean labels & 100 questions & MIT & Released repo \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \begin{table}[htbp]
@@ -388,7 +391,7 @@ which parameters, and the metric reported.}
 \footnotesize
 \setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{0.9}
-\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{2.4cm}>{\raggedright\arraybackslash}p{1.9cm}@{}}
+\begin{tabularx}{\textwidth}{@{}l>{\hsize=1.1\hsize}L>{\hsize=1.0\hsize}L>{\hsize=1.0\hsize}L>{\hsize=0.9\hsize}L@{}}
 \toprule
 Exp. & Tests & Dataset & Parameters & Metric \\
 \midrule
@@ -397,7 +400,7 @@ E3 & Per-chunk vs.\ doc-level purge; revocation cost & BEIR \texttt{nq} + Poison
 E2 & Attribution vs.\ 2 baselines; drift sensitivity & RAGOrigin feedback over NQ & \Nquestions{} questions, top-\TopK{}, drift $p\in\{0,.3,.5\}$ & Cost (latency, calls); recall \\
 E4 & Suspects are harmful & RAGOrigin feedback over NQ & \Nquestions{} questions, top-\AsrTopK{} & Attack success \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \textbf{E1: Instrument validation.} E1 checks that the gate, signature
