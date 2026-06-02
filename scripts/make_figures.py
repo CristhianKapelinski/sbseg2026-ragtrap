@@ -25,22 +25,23 @@ ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "results"
 FIGS = ROOT / "paper" / "figs"
 
-# Shared style: single-column width, consistent fonts across both figures.
-COLW_IN = 3.3  # ~\columnwidth in the SBC two-column-ish single-column body
+# Shared style: each panel renders at ~half \columnwidth, so use a compact
+# short aspect ratio that reads well when scaled to 0.49\columnwidth.
+FIGSIZE = (3.3, 2.4)
 plt.rcParams.update(
     {
-        "font.size": 8,
-        "axes.labelsize": 8,
-        "axes.titlesize": 8,
-        "xtick.labelsize": 7,
-        "ytick.labelsize": 7,
-        "legend.fontsize": 7,
+        "font.size": 9,
+        "axes.labelsize": 9,
+        "axes.titlesize": 9,
+        "xtick.labelsize": 8,
+        "ytick.labelsize": 8,
+        "legend.fontsize": 8,
         "axes.linewidth": 0.6,
-        "lines.linewidth": 1.2,
+        "lines.linewidth": 1.3,
         "lines.markersize": 4,
         "figure.dpi": 200,
         "savefig.bbox": "tight",
-        "savefig.pad_inches": 0.02,
+        "savefig.pad_inches": 0.03,
         "pdf.fonttype": 42,
     }
 )
@@ -63,7 +64,7 @@ def fig_drift(real: dict) -> None:
         lo.append(max(0.0, rec["point"] - rec["ci_low"]))
         hi.append(max(0.0, rec["ci_high"] - rec["point"]))
 
-    fig, ax = plt.subplots(figsize=(COLW_IN, 2.1))
+    fig, ax = plt.subplots(figsize=FIGSIZE)
     ax.errorbar(
         xs,
         ys,
@@ -75,18 +76,21 @@ def fig_drift(real: dict) -> None:
         capsize=2.5,
         capthick=0.9,
     )
+    # annotate each point, nudging the p=0 label below the ceiling and the
+    # others above so no text overlaps the markers, error bars, or the frame.
     for x, y in zip(xs, ys):
+        dy = -11 if y > 0.95 else 6
         ax.annotate(
             f"{y:.2f}",
             (x, y),
             textcoords="offset points",
-            xytext=(6, 5),
-            fontsize=7,
+            xytext=(7, dy),
+            fontsize=8,
         )
     ax.set_xlabel("Post-ingestion drift fraction $p$")
     ax.set_ylabel("Traceback recall")
-    ax.set_xlim(-0.04, 0.54)
-    ax.set_ylim(0.40, 1.04)
+    ax.set_xlim(-0.04, 0.56)
+    ax.set_ylim(0.40, 1.06)
     ax.set_xticks([0.0, 0.3, 0.5])
     ax.set_yticks([0.4, 0.6, 0.8, 1.0])
     ax.grid(True, linewidth=0.4, alpha=0.4)
@@ -101,7 +105,7 @@ def fig_revoke(scaling: dict) -> None:
     revoke_ms = [p["revoke_mttr_s"] * 1e3 for p in pts]
     manual_ms = [p["manual_mttr_s"] * 1e3 for p in pts]
 
-    fig, ax = plt.subplots(figsize=(COLW_IN, 2.1))
+    fig, ax = plt.subplots(figsize=FIGSIZE)
     ax.plot(
         sizes,
         manual_ms,
@@ -120,18 +124,23 @@ def fig_revoke(scaling: dict) -> None:
     ax.set_yscale("log")
     ax.set_xlabel("Clean corpus size (passages)")
     ax.set_ylabel("MTTR (ms)")
-    # annotate each x with the manual/revoke ratio
-    for p in pts:
+    # widen the y-range so the ratio labels above the top manual point are not
+    # clipped by the frame
+    ax.set_ylim(top=ax.get_ylim()[1] * 6)
+    # annotate each x with the manual/revoke ratio; the leftmost label would
+    # collide with the y-axis if right-aligned, so left-align that one
+    for i, p in enumerate(pts):
+        first = i == 0
         ax.annotate(
             f"{round(p['mttr_ratio']):,}$\\times$",
             (p["n_clean_passages"], p["manual_mttr_s"] * 1e3),
             textcoords="offset points",
-            xytext=(-2, 5),
-            fontsize=6.5,
-            ha="right",
+            xytext=(5, 6) if first else (-3, 6),
+            fontsize=7,
+            ha="left" if first else "right",
         )
     ax.grid(True, which="both", linewidth=0.4, alpha=0.35)
-    ax.legend(loc="lower right", frameon=False)
+    ax.legend(loc="upper left", frameon=False)
     fig.savefig(FIGS / "revoke_scaling.pdf")
     plt.close(fig)
 
