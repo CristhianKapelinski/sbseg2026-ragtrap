@@ -147,8 +147,9 @@ def main() -> int:
         full = pts[-1]
         m.append(f"\\newcommand{{\\FullPassages}}{{{_grouped(full['n_clean_passages'])}}}")
         m.append(f"\\newcommand{{\\FullChunks}}{{{_grouped(full['n_chunks'])}}}")
-        m.append(f"\\newcommand{{\\EdLatency}}{{{_fmt(full['sign_latency_us'],1)}}}")
-        m.append(f"\\newcommand{{\\EdThroughput}}{{{_fmt(full['throughput_per_s'],0)}}}")
+        # Per-chunk signing cost comes from the signing_backends micro-benchmark (below),
+        # so \EdLatency/\EdThroughput stay consistent with \HmacLatency/\EdOverHmac, which
+        # are measured in that same run rather than from the scale-sweep point.
         m.append(f"\\newcommand{{\\EdRecord}}{{{_fmt(full['mean_record_bytes'],0)}}}")
         m.append(f"\\newcommand{{\\RevChunks}}{{{full['revoked_chunks']}}}")
         m.append(f"\\newcommand{{\\FullRevMttr}}{{{full['revoke_mttr_s']*1e6:.1f}}}")  # us
@@ -164,6 +165,10 @@ def main() -> int:
         ed, hm = sb["ed25519"], sb["hmac"]
         m.append(f"\\newcommand{{\\EdSig}}{{{int(ed['mean_signature_bytes'])}}}")
         m.append(f"\\newcommand{{\\HmacSig}}{{{int(hm['mean_signature_bytes'])}}}")
+        # Per-chunk signing-cost trio from one measurement (same Ed25519 vs HMAC run), so
+        # \EdOverHmac == \EdLatency / \HmacLatency to one decimal.
+        m.append(f"\\newcommand{{\\EdLatency}}{{{_fmt(ed['mean_sign_latency_us'],1)}}}")
+        m.append(f"\\newcommand{{\\EdThroughput}}{{{_fmt(1e6/ed['mean_sign_latency_us'],0)}}}")
         m.append(f"\\newcommand{{\\HmacLatency}}{{{_fmt(hm['mean_sign_latency_us'],1)}}}")
         m.append(f"\\newcommand{{\\EdOverHmac}}{{{_fmt(sb['ed25519_over_hmac_time'],1)}}}")
 

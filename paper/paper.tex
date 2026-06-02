@@ -256,7 +256,9 @@ treats corpus poisoning as a supply-chain problem: it attests documents at
 ingestion (C2PA-inspired, Ed25519 by design but simulated with HMAC in its
 prototype), weights retrieval by trust tier, and flags cross-source
 contradictions, reporting 0.0\% attack success across a five-tier poisoning
-benchmark over 500 Natural Questions passages~\cite{ragshield}. It signs at
+benchmark over 500 Natural Questions passages~\cite{ragshield}; the same
+evaluation reports a blind spot, an in-place replacement attack (its T6 tier)
+that still reaches 17.5\% attack success. It signs at
 document granularity rather than per chunk and provides neither signature-keyed
 traceback nor source revocation, the gap Table~\ref{tab:related} makes explicit;
 we compare capabilities rather than run it head to head because it releases no
@@ -483,7 +485,7 @@ poisoned suspects after ingestion drops recall from \RTrecall{} at $p{=}0$ to
 [\RTrecallDriftThreeLo{},\,\RTrecallDriftThreeHi{}]) at $p{=}0.3$ and
 \textbf{\RTrecallDriftFive{}} (95\%~CI
 [\RTrecallDriftFiveLo{},\,\RTrecallDriftFiveHi{}]) at $p{=}0.5$
-(Table~\ref{tab:drift}). Precision stays at \RTprecision{} because a hash match
+(Figure~\ref{fig:drift}). Precision stays at \RTprecision{} because a hash match
 is exact; the missed chunks are false negatives. This is exactly the regime a
 competent, content-mutating adversary operates in~\cite{carlini}: recovering
 drifted variants requires near-duplicate or semantic matching, for instance
@@ -491,23 +493,12 @@ MinHash~\cite{broder1997minhash}, SimHash~\cite{charikar2002simhash}, or
 locality-sensitive hashing~\cite{indyk1998lsh}, and is future work
 (Section~\ref{sec:limits}).
 
-\begin{table}[htbp]
+\begin{figure}[htbp]
 \centering
-\caption{E2-drift: \sysname{} recall vs.\ drift fraction $p$.}
-\label{tab:drift}
-\footnotesize
-\setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{0.9}
-\begin{tabular}{@{}lccc@{}}
-\toprule
-Drift $p$ & 0.0 & 0.3 & 0.5 \\
-\midrule
-Recall    & \RTrecall{} & \RTrecallDriftThree{} & \RTrecallDriftFive{} \\
-95\% CI   & $-$         & [\RTrecallDriftThreeLo{},\,\RTrecallDriftThreeHi{}] & [\RTrecallDriftFiveLo{},\,\RTrecallDriftFiveHi{}] \\
-Precision & \RTprecision{} & \RTprecision{} & \RTprecision{} \\
-\bottomrule
-\end{tabular}
-\end{table}
+\includegraphics[width=\columnwidth]{figs/drift_recall.pdf}
+\caption{E2-drift: traceback recall vs.\ drift fraction $p$ (95\% Wilson CIs).}
+\label{fig:drift}
+\end{figure}
 
 \textbf{E3: Surgical revocation, then cost at scale.} The lead result is that
 per-chunk revocation purges a compromised source without collateral. On
@@ -529,7 +520,9 @@ followed by their deletion, \FullRevMttr~$\mu$s on the full \FullChunks{}-chunk
 corpus, while without one the scan over every chunk takes \FullManMttr~ms; the
 \FullMttrRatio$\times$ ratio simply reflects $O(1)$ versus $O(\text{corpus})$ work
 and grows with corpus size, from \SmallMttrRatio$\times$ at \SmallPassages{}
-passages to \FullMttrRatio$\times$ at the full corpus (Table~\ref{tab:scale}).
+passages to \FullMttrRatio$\times$ at the full corpus (Figure~\ref{fig:revoke}):
+the surgical purge stays flat while the manual scan tracks the corpus, so the
+advantage widens by orders of magnitude as the corpus grows.
 The cost of the index is paid once at ingestion: per-chunk Ed25519 signing takes
 about \EdLatency~$\mu$s ($\sim$\EdThroughput{} chunks/s, single-threaded),
 producing a fixed \EdSig{}-byte signature in an \EdRecord{}-byte record, about
@@ -537,21 +530,13 @@ producing a fixed \EdSig{}-byte signature in an \EdRecord{}-byte record, about
 \HmacSig{}-byte tag) in exchange for non-repudiable provenance verifiable without
 the secret key.
 
-\begin{table}[htbp]
+\begin{figure}[htbp]
 \centering
-\caption{E3 scaling on the real BEIR \texttt{nq} corpus.}
-\label{tab:scale}
-\footnotesize
-\setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{0.9}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Passages & Chunks & Sign ($\mu$s) & Revoke & Manual / Revoke \\
-\midrule
-\input{scaling_rows}\\
-\bottomrule
-\end{tabular}
-\end{table}
+\includegraphics[width=\columnwidth]{figs/revoke_scaling.pdf}
+\caption{E3: revocation MTTR vs.\ manual scan across corpus scale (log axes;
+manual/revoke ratio annotated).}
+\label{fig:revoke}
+\end{figure}
 
 \textbf{E4: Attack-success context.} To confirm the suspects are genuinely
 dangerous, we feed the top-\AsrTopK{} retrieved contexts to a local \AsrGen{}
@@ -573,7 +558,7 @@ Attribution rests on an exact content-hash match, so it is not robust to a
 content-mutating adversary: any post-ingestion paraphrase or split-view
 mutation~\cite{carlini} of a chunk's bytes evades the hash, dropping recall to
 \RTrecallDriftThree{} at 30\% drift and \RTrecallDriftFive{} at 50\%
-(Table~\ref{tab:drift}). Closing this gap needs near-duplicate or semantic
+(Figure~\ref{fig:drift}). Closing this gap needs near-duplicate or semantic
 matching~\cite{broder1997minhash,charikar2002simhash,indyk1998lsh} and is the
 central piece of future work. Per-chunk signed provenance, the substrate the
 recovery layer is built on, is not claimed as novel: prior and concurrent systems
