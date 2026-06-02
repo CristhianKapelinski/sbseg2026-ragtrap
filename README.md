@@ -77,10 +77,9 @@ The clean BEIR substrate for the fast path is the frozen, checksum-pinned `data/
 ## Installation
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/CristhianKapelinski/sbseg2026-ragtrap.git
-cd sbseg2026-ragtrap
-# <!-- TODO(double-blind): swap to anonymized mirror -->
+# 1. Clone the repository (anonymous review: download the ZIP from the artifact link in the paper)
+git clone <REPOSITORY-URL> ragtrap
+cd ragtrap
 
 # 2. Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
