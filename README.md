@@ -2,9 +2,9 @@
 
 RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora**. RAG pipelines ground a language model on passages ingested from untrusted web and document sources with no trust check at admission, so corpus poisoning is cheap and effective; once a source is found compromised, the operator faces an unsolved problem: how to purge that source cleanly without rescanning the corpus or deleting benign content. RAGtrap records, for each ingested chunk, a cryptographically signed (real Ed25519) provenance record — source URI, principal, content hash, detector verdicts, timestamp — natively in the vector store. Revocation then removes **exactly** the compromised source's chunks at a false-purge rate of **0.00 vs 0.52** for document-level purging; traceback becomes **one O(1) content-hash lookup with 0 model calls**, matching two forensic baselines that pay 1000–2000 model calls (**~16,000x** lower latency on the full attack); and one-command revocation gives a **16,931x** mean-time-to-remediation advantage on the full 2,681,468-passage corpus.
 
-> **Paper:** *RAGtrap: Per-Chunk Signed Provenance with Constant-Time Traceback and One-Command Source Revocation for RAG Ingestion* — SBRC 2026 Salão de Ferramentas.
+> **Paper:** *RAGtrap: Per-Chunk Signed Provenance with Constant-Time Traceback and One-Command Source Revocation for RAG Ingestion* — SBSeg 2026 Salão de Ferramentas.
 
-> **For SBRC 2026 artifact reviewers (SeloD/F/S/R).** This README is the single, self-contained guide for evaluation: follow it end-to-end and you reach all four seals. Other Markdown files (`DOCUMENTATION.md`) are complementary documentation and are **not required** for the artifact review.
+> **For SBSeg 2026 artifact reviewers (SeloD/F/S/R).** This README is the single, self-contained guide for evaluation: follow it end-to-end and you reach all four seals. Other Markdown files (`DOCUMENTATION.md`) are complementary documentation and are **not required** for the artifact review.
 
 ---
 
@@ -12,7 +12,7 @@ RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora*
 
 | Section | Description |
 |---|---|
-| [Considered Seals](#considered-seals) | SBRC quality seals targeted by this artifact |
+| [Considered Seals](#considered-seals) | SBSeg quality seals targeted by this artifact |
 | [Basic Information](#basic-information) | Hardware, OS, and software environment |
 | [Dependencies](#dependencies) | Key pinned packages and how third-party inputs are fetched |
 | [Security Concerns](#security-concerns) | What runs locally, where keys/data live, network use |
