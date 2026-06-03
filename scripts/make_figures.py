@@ -51,7 +51,7 @@ def _load(name: str) -> dict:
     return json.loads((RESULTS / name).read_text(encoding="utf-8"))
 
 
-def fig_drift(real: dict) -> None:
+def fig_drift(real: dict, ax) -> None:
     """Traceback recall vs post-ingestion provenance-loss/drift fraction p."""
     rt = real["ragtrap"]
     order = [("drift_0", 0.0), ("drift_0.3", 0.3), ("drift_0.5", 0.5)]
@@ -64,7 +64,6 @@ def fig_drift(real: dict) -> None:
         lo.append(max(0.0, rec["point"] - rec["ci_low"]))
         hi.append(max(0.0, rec["ci_high"] - rec["point"]))
 
-    fig, ax = plt.subplots(figsize=FIGSIZE)
     ax.errorbar(
         xs,
         ys,
@@ -104,18 +103,16 @@ def fig_drift(real: dict) -> None:
     ax.set_xticks([0.0, 0.3, 0.5])
     ax.set_yticks([0.4, 0.6, 0.8, 1.0])
     ax.grid(True, linewidth=0.4, alpha=0.4)
-    fig.savefig(FIGS / "drift_recall.pdf")
-    plt.close(fig)
+    ax.set_title("(a) Traceback recall vs. drift")
 
 
-def fig_revoke(scaling: dict) -> None:
+def fig_revoke(scaling: dict, ax) -> None:
     """Surgical-revocation MTTR vs manual scan across corpus scale (log y)."""
     pts = scaling["scale_points"]
     sizes = [p["n_clean_passages"] for p in pts]
     revoke_ms = [p["revoke_mttr_s"] * 1e3 for p in pts]
     manual_ms = [p["manual_mttr_s"] * 1e3 for p in pts]
 
-    fig, ax = plt.subplots(figsize=FIGSIZE)
     ax.plot(
         sizes,
         manual_ms,
@@ -157,18 +154,21 @@ def fig_revoke(scaling: dict) -> None:
         )
     ax.grid(True, which="both", linewidth=0.4, alpha=0.35)
     ax.legend(loc="upper left", frameon=False)
-    fig.savefig(FIGS / "revoke_scaling.pdf")
-    plt.close(fig)
+    ax.set_title("(b) Revocation MTTR vs. scale")
 
 
 def main() -> int:
     FIGS.mkdir(parents=True, exist_ok=True)
     real = _load("real_results.json")
     scaling = _load("scaling_results.json")
-    fig_drift(real)
-    fig_revoke(scaling)
-    print(f"wrote {FIGS/'drift_recall.pdf'}")
-    print(f"wrote {FIGS/'revoke_scaling.pdf'}")
+    # Both panels in ONE figure so they share sizing, fonts, and baselines.
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6.8, 2.5))
+    fig_drift(real, ax1)
+    fig_revoke(scaling, ax2)
+    fig.tight_layout(pad=0.6)
+    fig.savefig(FIGS / "results_panels.pdf")
+    plt.close(fig)
+    print(f"wrote {FIGS/'results_panels.pdf'}")
     return 0
 
 
