@@ -183,6 +183,26 @@ def main() -> int:
         m.append(f"\\newcommand{{\\PerDocPurged}}{{{e3['per_document']['total_purged']}}}")
         m.append(f"\\newcommand{{\\PerDocFalse}}{{{e3['per_document']['false_purged_clean']}}}")
         m.append(f"\\newcommand{{\\PerChunkFP}}{{{_fmt(e3['per_chunk']['false_purge_rate']['point'],2)}}}")
+        # Per-chunk collateral is MEASURED (clean chunks removed by per-chunk revocation), not
+        # asserted; \PerChunkFalse is that raw count and is 0 by the per-chunk design here.
+        m.append(f"\\newcommand{{\\PerChunkFalse}}{{{e3['per_chunk']['false_purged_clean']}}}")
+        m.append(f"\\newcommand{{\\PerChunkPurged}}{{{e3['per_chunk']['total_purged']}}}")
+        m.append(f"\\newcommand{{\\PoisonPerDoc}}{{{e3['poison_per_doc']}}}")
+
+    # ---- E3 poison-per-doc sensitivity sweep ----
+    # Macro names cannot contain digits, so poison_per_doc {1,2,3,5} -> {One,Two,Three,Five}.
+    sweep = aux.get("E3_sweep", {})
+    if sweep:
+        _ppd_tag = {1: "One", 2: "Two", 3: "Three", 5: "Five"}
+        for p in sweep.get("points", []):
+            tag = _ppd_tag.get(p["poison_per_doc"])
+            if tag is None:
+                continue
+            r = p["per_document_false_purge_rate"]
+            m.append(f"\\newcommand{{\\SweepPerDocFP{tag}}}{{{_fmt(r['point'],2)}}}")
+            m.append(f"\\newcommand{{\\SweepPerDocFP{tag}Lo}}{{{_fmt(r['ci_low'],2)}}}")
+            m.append(f"\\newcommand{{\\SweepPerDocFP{tag}Hi}}{{{_fmt(r['ci_high'],2)}}}")
+            m.append(f"\\newcommand{{\\SweepPerDocPurged{tag}}}{{{p['per_document_total_purged']}}}")
 
     # ---- E5 ASR ----
     e5 = aux.get("E5", {})

@@ -408,38 +408,40 @@
     "E3": {
       "experiment": "E3_granularity",
       "data": "real BEIR nq passages + injected real PoisonedRAG passages (one principal/doc)",
-      "n_documents": 230,
+      "n_documents": 206,
       "poison_per_doc": 3,
       "per_document": {
-        "total_purged": 1441,
-        "false_purged_clean": 751,
+        "total_purged": 1290,
+        "false_purged_clean": 672,
         "false_purge_rate": {
-          "k": 751,
-          "n": 1441,
-          "point": 0.5211658570437196,
-          "ci_low": 0.4953506680542784,
-          "ci_high": 0.5468684928558173
+          "k": 672,
+          "n": 1290,
+          "point": 0.5209302325581395,
+          "ci_low": 0.49364697890383896,
+          "ci_high": 0.5480891965290735
         }
       },
       "per_chunk": {
-        "total_purged": 690,
+        "total_purged": 618,
         "false_purged_clean": 0,
+        "false_purge_measured_zero": true,
         "false_purge_rate": {
           "k": 0,
-          "n": 690,
+          "n": 618,
           "point": 0.0,
           "ci_low": 0.0,
-          "ci_high": 0.005536710396148054
+          "ci_high": 0.006177779035690117
         },
         "poison_recall": {
-          "k": 690,
-          "n": 690,
+          "k": 618,
+          "n": 618,
           "point": 1.0,
-          "ci_low": 0.9944632896038518,
-          "ci_high": 0.9999999999999999
+          "ci_low": 0.99382222096431,
+          "ci_high": 1.0
         }
       },
-      "poison_pool_sha256_pinned": "44df711454a9bada08e72e9e4a003a2cc845c43707ac93a3493e5168ec415cf2"
+      "poison_pool_sha256_pinned": "44df711454a9bada08e72e9e4a003a2cc845c43707ac93a3493e5168ec415cf2",
+      "beir_sample_sha256_pinned": "b31332809dbc08cea7bb90e82a325e01928b85ae507682cce42b0f44d75a7c41"
     },
     "E5": {
       "experiment": "E5_asr",
@@ -461,6 +463,112 @@
         "ci_high": 0.03699480747600191
       },
       "mean_gen_seconds": 0.33923848118283784
+    },
+    "E3_sweep": {
+      "experiment": "E3_poison_per_doc_sweep",
+      "data": "real BEIR nq passages + injected real PoisonedRAG passages (one principal/doc)",
+      "poison_per_doc_values": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "points": [
+        {
+          "poison_per_doc": 1,
+          "n_documents": 206,
+          "per_document_total_purged": 878,
+          "per_document_false_purged_clean": 672,
+          "per_document_false_purge_rate": {
+            "k": 672,
+            "n": 878,
+            "point": 0.765375854214123,
+            "ci_low": 0.7362264179224945,
+            "ci_high": 0.7922131567131317
+          },
+          "per_chunk_total_purged": 206,
+          "per_chunk_false_purged_clean": 0,
+          "per_chunk_false_purge_measured_zero": true,
+          "per_chunk_false_purge_rate": {
+            "k": 0,
+            "n": 206,
+            "point": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.018307142149125814
+          }
+        },
+        {
+          "poison_per_doc": 2,
+          "n_documents": 206,
+          "per_document_total_purged": 1084,
+          "per_document_false_purged_clean": 672,
+          "per_document_false_purge_rate": {
+            "k": 672,
+            "n": 1084,
+            "point": 0.6199261992619927,
+            "ci_low": 0.5906541412316361,
+            "ci_high": 0.6483512433758288
+          },
+          "per_chunk_total_purged": 412,
+          "per_chunk_false_purged_clean": 0,
+          "per_chunk_false_purge_measured_zero": true,
+          "per_chunk_false_purge_rate": {
+            "k": 0,
+            "n": 412,
+            "point": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.009238132981404456
+          }
+        },
+        {
+          "poison_per_doc": 3,
+          "n_documents": 206,
+          "per_document_total_purged": 1290,
+          "per_document_false_purged_clean": 672,
+          "per_document_false_purge_rate": {
+            "k": 672,
+            "n": 1290,
+            "point": 0.5209302325581395,
+            "ci_low": 0.49364697890383896,
+            "ci_high": 0.5480891965290735
+          },
+          "per_chunk_total_purged": 618,
+          "per_chunk_false_purged_clean": 0,
+          "per_chunk_false_purge_measured_zero": true,
+          "per_chunk_false_purge_rate": {
+            "k": 0,
+            "n": 618,
+            "point": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.006177779035690117
+          }
+        },
+        {
+          "poison_per_doc": 5,
+          "n_documents": 206,
+          "per_document_total_purged": 1702,
+          "per_document_false_purged_clean": 672,
+          "per_document_false_purge_rate": {
+            "k": 672,
+            "n": 1702,
+            "point": 0.39482961222091656,
+            "ci_low": 0.3718683248305006,
+            "ci_high": 0.4182645925517464
+          },
+          "per_chunk_total_purged": 1030,
+          "per_chunk_false_purged_clean": 0,
+          "per_chunk_false_purge_measured_zero": true,
+          "per_chunk_false_purge_rate": {
+            "k": 0,
+            "n": 1030,
+            "point": 0.0,
+            "ci_low": 0.0,
+            "ci_high": 0.003715849700766539
+          }
+        }
+      ],
+      "poison_pool_sha256_pinned": "44df711454a9bada08e72e9e4a003a2cc845c43707ac93a3493e5168ec415cf2",
+      "beir_sample_sha256_pinned": "b31332809dbc08cea7bb90e82a325e01928b85ae507682cce42b0f44d75a7c41"
     }
   }
 }

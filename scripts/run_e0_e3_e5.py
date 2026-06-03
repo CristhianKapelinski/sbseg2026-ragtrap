@@ -18,7 +18,7 @@ from ragtrap.realdata import (
     load_poisonedrag,
     load_ragorigin_feedback,
 )
-from ragtrap.realeval3 import run_e3_granularity
+from ragtrap.realeval3 import run_e3_granularity, sweep_e3_poison_per_doc
 
 
 def main() -> int:
@@ -46,6 +46,13 @@ def main() -> int:
         args.parquet, poison_pool, n_documents=args.e3_docs, poison_per_doc=3
     )
     out["E3"]["poison_pool_sha256_pinned"] = POISONEDRAG_SHA256["nq"]
+
+    # E3 sensitivity sweep -- false-purge rate vs injected adversarial passages per document.
+    out["E3_sweep"] = sweep_e3_poison_per_doc(
+        args.parquet, poison_pool, n_documents=args.e3_docs,
+        poison_per_doc_values=(1, 2, 3, 5),
+    )
+    out["E3_sweep"]["poison_pool_sha256_pinned"] = POISONEDRAG_SHA256["nq"]
 
     # E5 -- end-to-end attack-success positioning (GPU generation model).
     if not args.skip_asr:

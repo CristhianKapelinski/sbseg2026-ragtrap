@@ -68,7 +68,7 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
         load_ragorigin_feedback,
     )
     from ragtrap.realeval import run_e1_ragtrap
-    from ragtrap.realeval3 import run_e3_granularity
+    from ragtrap.realeval3 import run_e3_granularity, sweep_e3_poison_per_doc
 
     # E0 -- instrument correctness (verify, tamper-detect, attribute, revoke); pure crypto.
     _section("E0 instrument validation (verify / tamper / attribute / revoke)")
@@ -111,6 +111,18 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
     print(f"   false-purge per-document = {_fmt2(pd)}  per-chunk = {_fmt2(pc)}  "
           f"(over {e3['n_documents']} documents)", flush=True)
 
+    # E3 sensitivity sweep over the injected-passage budget (same real BEIR sample).
+    e3_sweep = sweep_e3_poison_per_doc(
+        sample_parquet, poison_pool, n_documents=e3_docs, poison_per_doc_values=(1, 2, 3, 5)
+    )
+    e3_sweep["poison_pool_sha256_pinned"] = POISONEDRAG_SHA256["nq"]
+    e3_sweep["beir_sample_sha256_pinned"] = BEIR_NQ_SAMPLE_SHA256
+    print("   per-document false-purge by poison_per_doc: "
+          + "  ".join(
+              f"{p['poison_per_doc']}->{_fmt2(p['per_document_false_purge_rate']['point'])}"
+              for p in e3_sweep["points"]
+          ), flush=True)
+
     headline = {
         "false_purge_per_document": round(pd, 4),
         "false_purge_per_chunk": round(pc, 4),
@@ -146,6 +158,7 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
         "E0": e0,
         "E2_traceback_and_drift": rt,
         "E3_granularity": e3,
+        "E3_poison_per_doc_sweep": e3_sweep,
     }
 
 
