@@ -1,0 +1,36 @@
+# Image 1 — sealed ingestion, trace-back, surgical revocation
+
+- **Save the PNG as:** `paper/figs/concept_traceback.png`
+- **Aspect ratio:** 4:3
+- **Where it goes:** opening concept figure
+- **Background the AI needs (it has no other context):** a "knowledge base" here
+  is a collection of short text passages that an AI assistant later searches
+  through to answer questions; "poisoning" means a malicious passage was secretly
+  inserted into that collection.
+- **Note:** self-contained; keep the image text-free, labels go in the caption.
+
+```prompt
+Flat modern vector illustration, clean editorial academic style, white background,
+isometric perspective. Left-to-right narrative in three beats.
+BEAT 1 (left): a neat stack of small text-passage cards flowing rightward through
+a doorway/gate. As each card passes the gate it receives a small glowing wax-seal
+/ fingerprint stamp in teal on its corner (a cryptographic signature applied at
+entry). Most cards are calm navy; ONE card among them is subtly corrupted — a
+faint red hairline crack and a tiny skull-free "warning" glitch — but it still
+gets stamped and passes.
+BEAT 2 (centre): the stamped cards settle inside a translucent database cylinder /
+vault. Above the vault, a small magnifying glass follows a thin dotted line that
+starts from a floating question/answer bubble and traces back THROUGH the vault
+straight to the single cracked red card (pinpoint attribution to the source).
+BEAT 3 (right): the cracked red card is lifted out of the vault and dissolves into
+small particles (revoked and purged), while every clean sealed card stays neatly
+in place and intact — no collateral damage.
+Show motion with thin directional arrows between the three beats. Focal element:
+the magnifying glass locking onto the single red card. Palette: deep navy #1F3A5F
+linework and clean cards, teal #2A9D8F for the seal stamps and the vault accent,
+amber #E9C46A for the magnifier highlight, red ONLY for the one poisoned card and
+its crack, light gray soft shadows, white background. Thin uniform monoline
+strokes, rounded corners, no gradients, no photorealism, minimal clutter. NO text,
+no words, no letters, no numbers, no logos. 4:3 aspect ratio, balanced negative
+space.
+```
