@@ -67,7 +67,7 @@ suspects) / `realeval3`, `scaling` (E3 MTTR + ingestion cost on the full corpus)
 
 Behaviour is environment-driven (prefix `RAGTRAP_`). Every run logs to console and to
 `logs/run-<timestamp>.log`. Each third-party input is pinned by content digest. Heavy data
-(corpus, models, repos) lives under `$RAGTRAP_DATA_ROOT` (default `/mnt/win_ssd/sbseg-work/ragtrap`)
+(corpus, models, repos) lives under `$RAGTRAP_DATA_ROOT` (default `~/.cache/ragtrap`)
 so the repo holds only code, results, and the paper. One command runs everything:
 `bash scripts/reproduce.sh`.
 

@@ -164,7 +164,7 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
 
 def run_full(args, fast_out: dict) -> None:
     """Run the slow, model-served baselines and the full-corpus scaling sweep."""
-    data_root = os.environ.get("RAGTRAP_DATA_ROOT", "/mnt/win_ssd/sbseg-work/ragtrap")
+    data_root = os.environ.get("RAGTRAP_DATA_ROOT", os.path.expanduser("~/.cache/ragtrap"))
     parquet = _find_full_parquet(data_root)
     if parquet is None:
         raise SystemExit(

@@ -36,7 +36,7 @@ done
 if [ "${REPRODUCE_FULL:-0}" = "1" ]; then FULL=1; fi
 
 export HF_HUB_DISABLE_XET=1
-DATA_ROOT="${RAGTRAP_DATA_ROOT:-/mnt/win_ssd/sbseg-work/ragtrap}"
+DATA_ROOT="${RAGTRAP_DATA_ROOT:-$HOME/.cache/ragtrap}"
 
 echo "== fetching + checksum-pinning third-party inputs (root=$DATA_ROOT) =="
 if [ "$FULL" = "1" ]; then

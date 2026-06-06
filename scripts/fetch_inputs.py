@@ -81,7 +81,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
         "--root",
-        default=os.environ.get("RAGTRAP_DATA_ROOT", "/mnt/win_ssd/sbseg-work/ragtrap"),
+        default=os.environ.get("RAGTRAP_DATA_ROOT", os.path.expanduser("~/.cache/ragtrap")),
     )
     ap.add_argument("--full", action="store_true",
                     help="also download the full 2.68M-passage BEIR/nq corpus (~764 MB)")

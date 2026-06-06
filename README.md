@@ -2,7 +2,7 @@
 
 RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora**. RAG pipelines ground a language model on passages ingested from untrusted web and document sources with no trust check at admission, so corpus poisoning is cheap and effective; once a source is found compromised, the operator faces an unsolved problem: how to purge that source cleanly without rescanning the corpus or deleting benign content. RAGtrap records, for each ingested chunk, a cryptographically signed (real Ed25519) provenance record — source URI, principal, content hash, detector verdicts, timestamp — natively in the vector store. Revocation then removes **exactly** the compromised source's chunks at a false-purge rate of **0.00 vs 0.52** for document-level purging; traceback becomes **one O(1) content-hash lookup with 0 model calls**, matching two forensic baselines that pay 1000–2000 model calls (**~16,000x** lower latency on the full attack); and one-command revocation gives a **16,931x** mean-time-to-remediation advantage on the full 2,681,468-passage corpus.
 
-> **Paper:** *RAGtrap: Per-Chunk Signed Provenance with Constant-Time Traceback and One-Command Source Revocation for RAG Ingestion* — SBSeg 2026 Salão de Ferramentas.
+> **Paper:** *RAGtrap: Per-Chunk Signed Provenance with Constant-Time Traceback and One-Command Source Revocation for RAG Ingestion* (SBSeg 2026).
 
 > **For SBSeg 2026 artifact reviewers (SeloD/F/S/R).** This README is the single, self-contained guide for evaluation: follow it end-to-end and you reach all four seals. Other Markdown files (`DOCUMENTATION.md`) are complementary documentation and are **not required** for the artifact review.
 
@@ -16,7 +16,7 @@ RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora*
 | [Basic Information](#basic-information) | Hardware, OS, and software environment |
 | [Dependencies](#dependencies) | Key pinned packages and how third-party inputs are fetched |
 | [Security Concerns](#security-concerns) | What runs locally, where keys/data live, network use |
-| [Installation](#installation) | Clone, install uv, `uv sync` |
+| [Installation](#installation) | Get the artifact, install uv, `uv sync` |
 | [Minimal Test](#minimal-test) | One-command end-to-end functional check (~1 s) |
 | [Experiments](#experiments) | Reproduction of the paper's four claims (E1–E4) |
 | [License](#license) | Licensing information |
@@ -39,11 +39,11 @@ The seals considered are: **Available (SeloD)**, **Functional (SeloF)**, **Susta
 | | |
 |---|---|
 | **OS** | Linux (x86_64); validated on Ubuntu/Debian, kernel 6.17 |
-| **Python** | 3.10+ (validated on 3.12.3), managed by [`uv`](https://astral.sh/uv) |
+| **Python** | 3.10+ (validated on 3.12 and 3.13), managed by [`uv`](https://astral.sh/uv) |
 | **RAM** | Fast path: < 1 GB. Full `--full` scaling point builds ~4.4M signed records and uses up to ~10 GB |
 | **Disk** | `.venv` after `uv sync`: ~333 MB; fast path adds nothing (337 KB sample ships in git). `--full` adds ~764 MB (BEIR corpus) + a few GB (local model) under `$RAGTRAP_DATA_ROOT` |
 | **GPU** | **Not required** for the minimal test or the main claim. Only the `--full` model-served baselines (E2 LLM judge / RAGOrigin proxy, E4 generation) use a single CUDA GPU |
-| **Reference machine** | AMD Ryzen / Intel x86_64, 32 GB RAM, Python 3.12.3, no GPU — minimal test ~1 s, fast main experiment ~10 s |
+| **Reference machine** | x86_64, 32 GB RAM, Python 3.13, no GPU — minimal test ~1 s, fast main experiment ~10 s |
 
 ---
 
@@ -70,15 +70,16 @@ The clean BEIR substrate for the fast path is the frozen, checksum-pinned `data/
 - The artifact runs **only locally** — its own code plus the listed PyPI packages and the two cloned baseline repositories; corpus text is hashed, signed, indexed, and compared as data, **never executed**.
 - The Ed25519 **private key is generated per run and never written to disk**; only the non-secret public-key identity is logged and recorded in the manifest. `.gitignore` excludes `*.key`.
 - **No credentials are required.** The `--full` baseline judge runs against a local open model on the GPU; the fast path makes no model calls and no API calls.
-- **Network** is used once, only to fetch the two small third-party files (fast path) or additionally the corpus + model (`--full`). Heavy data lives under `$RAGTRAP_DATA_ROOT` (default `/mnt/win_ssd/sbseg-work/ragtrap`), never inside the repository.
+- **Network** is used once, only to fetch the two small third-party files (fast path) or additionally the corpus + model (`--full`). Heavy data lives under `$RAGTRAP_DATA_ROOT` (default `~/.cache/ragtrap`), never inside the repository.
 
 ---
 
 ## Installation
 
 ```bash
-# 1. Clone the repository (anonymous review: download the ZIP from the artifact link in the paper)
-git clone <REPOSITORY-URL> ragtrap
+# 1. Get the anonymized artifact (double-blind review: download the ZIP from the
+#    anonymous mirror at https://anonymous.4open.science/r/sbseg2026-ragtrap and unzip)
+unzip sbseg2026-ragtrap.zip -d ragtrap
 cd ragtrap
 
 # 2. Install uv (if not already installed)

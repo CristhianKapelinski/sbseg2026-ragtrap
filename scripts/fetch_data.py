@@ -39,7 +39,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--root",
-        default=os.environ.get("RAGTRAP_DATA_ROOT", "/mnt/win_ssd/sbseg-work/ragtrap"),
+        default=os.environ.get("RAGTRAP_DATA_ROOT", os.path.expanduser("~/.cache/ragtrap")),
     )
     ap.add_argument("--no-corpus", action="store_true", help="skip the 764MB BEIR corpus download")
     args = ap.parse_args()

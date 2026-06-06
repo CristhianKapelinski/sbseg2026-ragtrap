@@ -1,7 +1,7 @@
 {
   "data": {
     "corpus": "BEIR/nq (real, 2,681,468 passages)",
-    "parquet": "/mnt/win_ssd/sbseg-work/ragtrap/hf/hub/datasets--BeIR--nq/snapshots/b7253e6c379163d024ddb1d6948152a91a2e3b46/corpus/corpus-00000-of-00001.parquet",
+    "parquet": "~/.cache/ragtrap/hf/hub/datasets--BeIR--nq/snapshots/b7253e6c379163d024ddb1d6948152a91a2e3b46/corpus/corpus-00000-of-00001.parquet",
     "poison": "PoisonedRAG nq.json released adversarial passages",
     "poison_sha256_pinned": "44df711454a9bada08e72e9e4a003a2cc845c43707ac93a3493e5168ec415cf2",
     "n_poison_chunks": 500,
