@@ -7,7 +7,7 @@ This is the engine behind ``reproduce.sh``. It has two modes:
   headline numbers in a few minutes with no model download and no GPU:
 
     - false-purge rate, per-document vs per-chunk (E3): ``0.52`` vs ``0.00``;
-    - constant-time traceback latency and the work-unit gap vs a per-suspect baseline (E2);
+    - constant-time per-suspect lookup latency and the work-unit gap vs a per-suspect baseline (E2);
     - recall under post-ingestion drift (E2 drift split): ``1.00 / 0.70 / 0.51`` at
       drift ``0.0 / 0.3 / 0.5``.
 
@@ -86,7 +86,7 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
 
     fb = load_ragorigin_feedback(feedback, expected_sha256=RAGORIGIN_FEEDBACK_SHA256)
 
-    # E2 -- constant-time traceback + recall under post-ingestion drift (model-free).
+    # E2 -- constant-time lookup per suspect + recall under post-ingestion drift (model-free).
     _section("E2 traceback latency + drift split (RAGtrap O(1) lookup, no model)")
     rt: dict[str, dict] = {}
     for d in (0.0, 0.3, 0.5):
@@ -224,7 +224,7 @@ def main() -> int:
     ap.add_argument("--sample-parquet", default=str(DEFAULT_SAMPLE),
                     help="frozen BEIR/nq passage sample (default: data/beir_nq_sample.parquet)")
     ap.add_argument("--top-k", type=int, default=10)
-    ap.add_argument("--e3-docs", type=int, default=200)
+    ap.add_argument("--e3-docs", type=int, default=250)
     ap.add_argument("--full", action="store_true",
                     help="also run the slow model-served baselines + full-corpus scaling sweep")
     ap.add_argument("--quick", action="store_true",

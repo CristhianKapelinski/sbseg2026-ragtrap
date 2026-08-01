@@ -1,4 +1,4 @@
-"""Tests for chunking, ingestion, constant-time traceback, and granularity."""
+"""Tests for chunking, ingestion, per-suspect provenance lookup, and granularity."""
 
 from __future__ import annotations
 

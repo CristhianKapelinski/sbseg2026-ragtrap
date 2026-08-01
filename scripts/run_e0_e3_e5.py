@@ -28,7 +28,7 @@ def main() -> int:
     ap.add_argument("--feedback", required=True)
     ap.add_argument("--judge-model", default="Qwen/Qwen2.5-3B-Instruct")
     ap.add_argument("--asr-top-k", type=int, default=5)
-    ap.add_argument("--e3-docs", type=int, default=200)
+    ap.add_argument("--e3-docs", type=int, default=250)
     ap.add_argument("--skip-asr", action="store_true")
     ap.add_argument("--out", default="results/aux_results.json")
     args = ap.parse_args()

@@ -1,8 +1,8 @@
-# RAGtrap: Per-Chunk Signed Provenance with Constant-Time Traceback and One-Command Source Revocation for RAG Ingestion
+# RAGtrap: Surgical Source Revocation and Constant-Time Provenance Lookup for Poisoned RAG Corpora
 
-RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora**. RAG pipelines ground a language model on passages ingested from untrusted web and document sources with no trust check at admission, so corpus poisoning is cheap and effective; once a source is found compromised, the operator faces an unsolved problem: how to purge that source cleanly without rescanning the corpus or deleting benign content. RAGtrap records, for each ingested chunk, a cryptographically signed (real Ed25519) provenance record — source URI, principal, content hash, detector verdicts, timestamp — natively in the vector store. Revocation then removes **exactly** the compromised source's chunks at a false-purge rate of **0.00 vs 0.52** for document-level purging; traceback becomes **one O(1) content-hash lookup with 0 model calls**, matching two forensic baselines that pay 1000–2000 model calls (**~16,000x** lower latency on the full attack); and one-command revocation gives a **16,931x** mean-time-to-remediation advantage on the full 2,681,468-passage corpus.
+RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora**. RAG pipelines ground a language model on passages ingested from untrusted web and document sources with no trust check at admission, so corpus poisoning is cheap and effective; once a source is found compromised, the operator faces an unsolved problem: how to purge that source cleanly without rescanning the corpus or deleting benign content. RAGtrap records, for each ingested chunk, a cryptographically signed (real Ed25519) provenance record — source URI, principal, content hash, detector verdicts, timestamp — natively in the vector store. Revocation then removes **exactly** the compromised source's chunks at a false-purge rate of **0.00 vs 0.52** for document-level purging. For each suspect, traceback is **one expected-O(1) content-hash lookup with 0 model calls**; on identical inputs, the two forensic baselines instead infer origin from text and require 1000–2000 model calls (**16,274x** and **634x** the lookup latency). One-command revocation gives a **16,931x** mean-time-to-remediation advantage on the full 2,681,468-passage corpus.
 
-> **Paper:** *RAGtrap: Per-Chunk Signed Provenance with Constant-Time Traceback and One-Command Source Revocation for RAG Ingestion* (SBSeg 2026).
+> **Paper:** *RAGtrap: Surgical Source Revocation and Constant-Time Provenance Lookup for Poisoned RAG Corpora* (SBSeg 2026).
 
 > **For SBSeg 2026 artifact reviewers (SeloD/F/S/R).** This README is the single, self-contained guide for evaluation: follow it end-to-end and you reach all four seals. Other Markdown files (`DOCUMENTATION.md`) are complementary documentation and are **not required** for the artifact review.
 
@@ -101,7 +101,7 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 ./scripts/minimal_test.sh
 ```
 
-**Expected output:** the selftest prints JSON ending in `"instrument_valid": true`; the demo prints `ingested chunks: 100`, `traceback attributed 10 suspects via O(1) lookup`, and `revoke-source attacker-0: purged 10 chunks (100 -> 90)`; the suite reports `30 passed`; the final line is `MINIMAL TEST: PASSED`. **Measured on the reference machine: ~1 s.**
+**Expected output:** the selftest prints JSON ending in `"instrument_valid": true`; the demo prints `ingested chunks: 100`, `traceback attributed 10 suspects via one O(1) lookup each`, and `revoke-source attacker-0: purged 10 chunks (100 -> 90)`; the suite reports `30 passed`; the final line is `MINIMAL TEST: PASSED`. **Measured on the reference machine: ~1 s.**
 
 ---
 
@@ -129,7 +129,7 @@ Each claim below is **one command** and defaults to a **fast variant**. The slow
 
 ### E2 — Forensic-time attribution and drift sensitivity
 
-- **Description:** on the real PoisonedRAG attack over Natural Questions, RAGtrap attributes 1000 identical suspects (500 poison / 500 clean) with one content-hash lookup and **0 model calls**, matching two model-served forensic baselines on accuracy. Because matching is exact, recall degrades honestly under post-ingestion drift while precision stays exact.
+- **Description:** on the real PoisonedRAG attack over Natural Questions, RAGtrap resolves each of 1000 suspects (500 poison / 500 clean) with one content-hash lookup and **0 model calls**. The two model-served forensic baselines receive the same suspects but infer origin from text, so this experiment compares architectural cost rather than equivalent detectors. Exact hash lookup loses matches under post-ingestion drift while resolved matches remain precise.
 - **Execution (fast, from the main experiment above):**
   ```bash
   uv run python -c "import json;h=json.load(open('results/main_results.json'))['headline'];print({k:h[k] for k in ('drift_recall_0.0','drift_recall_0.3','drift_recall_0.5','ragtrap_per_suspect_us','ragtrap_work_units','ragtrap_model_calls')})"

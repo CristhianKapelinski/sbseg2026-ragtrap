@@ -126,7 +126,7 @@ def cmd_demo(args: argparse.Namespace) -> int:
     attributed = {cid: p for cid, p in attribution.attributions.items() if p is not None}
     print(f"ingested chunks: {len(store)}")
     print(f"suspect chunks: {len(suspects)}")
-    print(f"traceback attributed {len(attributed)} suspects via O(1) lookup")
+    print(f"traceback attributed {len(attributed)} suspects via one O(1) lookup each")
     print(f"traceback work units (lookups): {attribution.work_units}")
 
     target = "attacker-0"

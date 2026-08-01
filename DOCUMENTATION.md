@@ -171,9 +171,9 @@ grows linearly to 782 ms at 4.36M chunks: a **16931x** MTTR advantage on the ful
 corpus size (44x -> 627x -> 6977x -> 16931x). Real Ed25519 per-chunk signing is ~69-90 us/chunk
 (11k-16k chunks/s single-threaded), about 1.9x the symmetric HMAC stand-in, in exchange for
 non-repudiable public-key provenance. E3 also contrasts per-chunk against per-document granularity:
-for 230 real NQ passages each injected with 3 real PoisonedRAG passages under one principal, the
+for 206 real NQ passages each injected with 3 real PoisonedRAG passages under one principal, the
 per-document scheme over-purges clean fragments at a false-purge rate of **0.521** (95% Wilson CI
-[0.495, 0.547]; 751 of 1441 removed chunks were clean), while RAGtrap's per-chunk scheme has
+[0.494, 0.548]; 672 of 1290 removed chunks were clean), while RAGtrap's per-chunk scheme has
 false-purge rate **0.000**. Exact numbers in `results/aux_results.json`.
 
 ### E4 -- End-to-end attack-success context
