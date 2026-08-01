@@ -4,7 +4,7 @@ RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora*
 
 > **Paper:** *RAGtrap: Surgical Source Revocation and Constant-Time Provenance Lookup for Poisoned RAG Corpora* (SBSeg 2026).
 
-> **For SBSeg 2026 artifact reviewers (SeloD/F/S/R).** This README is the single, self-contained guide for evaluation: follow it end-to-end and you reach all four seals. Other Markdown files (`DOCUMENTATION.md`) are complementary documentation and are **not required** for the artifact review.
+> **SBSeg 2026 artifact evaluation.** Review instructions: [submission](https://doc-artefatos.github.io/sbseg2026/subinstrucoes.html) / [review](https://doc-artefatos.github.io/sbseg2026/revinstrucoes.html).
 
 ---
 
@@ -101,33 +101,23 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 ./scripts/minimal_test.sh
 ```
 
-**Expected output:** the selftest prints JSON ending in `"instrument_valid": true`; the demo prints `ingested chunks: 100`, `traceback attributed 10 suspects via one O(1) lookup each`, and `revoke-source attacker-0: purged 10 chunks (100 -> 90)`; the suite reports `30 passed`; the final line is `MINIMAL TEST: PASSED`. **Measured on the reference machine: ~1 s.**
+**Expected output:** the selftest prints JSON ending in `"instrument_valid": true`; the demo prints `ingested chunks: 100`, `traceback attributed 10 suspects via one O(1) lookup each`, and `revoke-source attacker-0: purged 10 chunks (100 -> 90)`; the suite's progress bar reaches `[100%]`; the final line is `MINIMAL TEST: PASSED`. **Measured on the reference machine: ~1 s.**
 
 ---
 
 ## Experiments
 
-The paper has four experiments (E1–E4). The **main claim is E3** (surgical revocation: per-chunk vs document-level false purge — the lead result delivering contribution C1), reproduced together with E2 by the fast, model-free [`scripts/experiment_main.sh`](scripts/experiment_main.sh) into `results/main_results.json`.
+The paper has four experiments; instrument validation (E1) is covered by the [Minimal Test](#minimal-test). The **main claim is \#2** (surgical revocation: per-chunk vs document-level false purge), reproduced together with Claim \#1 by the fast, model-free [`scripts/experiment_main.sh`](scripts/experiment_main.sh) into `results/main_results.json`.
 
 Each claim below is **one command** and defaults to a **fast variant**. The slow, GPU + model-served full run is gated behind `--full`; a reviewer who does not run it may instead inspect the pre-computed, real outputs already committed under [`results/`](results/) (`results.json`, `*_results.json`, `macros.tex`).
 
-> Run the fast main experiment once; it produces the headline used by E2 and E3 below:
+> Run the fast main experiment once; it produces the headline used by Claims \#1 and \#2 below:
 > ```bash
 > ./scripts/experiment_main.sh
 > ```
 > **Measured on the reference machine: ~10 s** (CPU only; the one-time ~6 MB input fetch is included). Writes `results/main_results.json`.
 
-### E1 — Instrument validation (the gate, signature, and revocation index are correct)
-
-- **Description:** on a 200-chunk labelled corpus, all signed records verify, a tampered message is rejected, traceback attributes every suspect by O(1) lookup, and `revoke-source` purges exactly the targeted principal's 20 chunks with no collateral.
-- **Execution:**
-  ```bash
-  uv run ragtrap selftest
-  ```
-- **Expected time:** ~1 s. **Expected resources:** CPU only, < 200 MB RAM, no network.
-- **Expected result:** JSON with `"instrument_valid": true` (`tamper_detected: true`, `purged_exactly_target: true`, `no_collateral_purge: true`).
-
-### E2 — Forensic-time attribution and drift sensitivity
+## Claim \#1 — Forensic-time attribution and drift sensitivity
 
 - **Description:** on the real PoisonedRAG attack over Natural Questions, RAGtrap resolves each of 1000 suspects (500 poison / 500 clean) with one content-hash lookup and **0 model calls**. The two model-served forensic baselines receive the same suspects but infer origin from text, so this experiment compares architectural cost rather than equivalent detectors. Exact hash lookup loses matches under post-ingestion drift while resolved matches remain precise.
 - **Execution (fast, from the main experiment above):**
@@ -138,7 +128,7 @@ Each claim below is **one command** and defaults to a **fast variant**. The slow
 - **Expected result:** drift recall **1.00 / 0.70 / 0.51** at p = 0.0 / 0.3 / 0.5; per-suspect latency ~80–110 µs; 1000 work units; **0 model calls**.
 - **Full variant (`--full`, GPU + model, ~30–60 min):** `./scripts/experiment_main.sh --full` runs the published RAGForensics LLM-judge and RAGOrigin proxy baselines on the identical suspects. Measured (stored in `results/real_results.json`): judge recall **0.96** at **1.65 s/suspect** (1000 model calls); RAGOrigin recall **1.00** at 64.5 ms/suspect (2000 calls); RAGtrap **101.7 µs/suspect**, 0 calls → **16,274x** faster than the judge, **634x** faster than the proxy.
 
-### E3 — Surgical revocation, then MTTR at corpus scale (MAIN CLAIM)
+## Claim \#2 — Surgical revocation, then MTTR at corpus scale **(main claim)**
 
 - **Description:** for real NQ passages each injected with PoisonedRAG passages under one principal, document-level purging over-purges clean fragments while RAGtrap's per-chunk scheme removes exactly the poisoned chunks; the one-command revocation MTTR advantage grows with corpus size up to the full 2,681,468-passage corpus.
 - **Execution (fast, from the main experiment above):**
@@ -149,7 +139,7 @@ Each claim below is **one command** and defaults to a **fast variant**. The slow
 - **Expected result:** false-purge **per-document 0.52** (95% Wilson CI [0.49, 0.55]) vs **per-chunk 0.00**.
 - **Full variant (`--full`, ~20–30 min, CPU):** the scaling sweep in `./scripts/experiment_main.sh --full`. Measured (stored in `results/scaling_results.json`): on the full 4,364,162-chunk corpus, `revoke-source` purges in **46.2 µs** vs a **782 ms** manual scan — a **16,931x** MTTR advantage that grows with corpus size (44x → 627x → 6977x → 16931x); real Ed25519 per-chunk signing is ~69–90 µs/chunk, ~1.9x the symmetric HMAC stand-in.
 
-### E4 — Attack-success context (the suspects are genuinely harmful)
+## Claim \#3 — Attack-success context (the suspects are genuinely harmful)
 
 - **Description:** feeding the top-5 retrieved contexts to a local generation model steers it to the attacker's target answer, confirming the attributed suspects are dangerous.
 - **Execution (`--full` only, GPU, ~5 min):**
