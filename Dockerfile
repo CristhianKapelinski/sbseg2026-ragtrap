@@ -17,7 +17,7 @@ WORKDIR /app
 # Install the package first (dependency layer cached independently of source churn).
 COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
-RUN pip install --upgrade pip && pip install ".[data]"
+RUN pip install --upgrade pip && pip install "."
 
 # Tests, scripts, and the frozen checksum-pinned BEIR sample (for the fast E3 path).
 COPY tests ./tests
