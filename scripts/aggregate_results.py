@@ -28,6 +28,11 @@ def _fmt(x: float, nd: int = 0) -> str:
     return f"{x:.{nd}f}"
 
 
+def _grouped(n: float) -> str:
+    """Integer with LaTeX-safe thousands separators (1000 -> 1{,}000)."""
+    return f"{round(n):,}".replace(",", "{,}")
+
+
 def main() -> int:
     real = _load("real_results.json")
     scaling = _load("scaling_results.json")
@@ -52,7 +57,7 @@ def main() -> int:
     d0 = rt.get("drift_0", {})
     det0 = d0.get("detection", {})
     if det0:
-        m.append(f"\\newcommand{{\\NsuspectsE}}{{{d0.get('n_suspects','')}}}")
+        m.append(f"\\newcommand{{\\NsuspectsE}}{{{_grouped(d0['n_suspects'])}}}")
         m.append(f"\\newcommand{{\\NpoisonE}}{{{d0.get('n_poison_suspects','')}}}")
         m.append(f"\\newcommand{{\\NcleanE}}{{{d0.get('n_clean_suspects','')}}}")
         rec, prec, fpr = det0["recall"], det0["precision"], det0["fpr"]
@@ -60,7 +65,7 @@ def main() -> int:
         m.append(f"\\newcommand{{\\RTprecision}}{{{_fmt(prec['point'],2)}}}")
         m.append(f"\\newcommand{{\\RTfpr}}{{{_fmt(fpr['point'],2)}}}")
         m.append(f"\\newcommand{{\\RTlatPerSus}}{{{_fmt(d0['latency_s_per_suspect_us'],1)}}}")
-        m.append(f"\\newcommand{{\\RTworkE}}{{{d0['work_units']}}}")
+        m.append(f"\\newcommand{{\\RTworkE}}{{{_grouped(d0['work_units'])}}}")
 
     # drift split (LaTeX macro names cannot contain digits, so 0.3 -> Three, 0.5 -> Five)
     for d, tag in (("drift_0.3", "Three"), ("drift_0.5", "Five")):
@@ -84,7 +89,7 @@ def main() -> int:
         m.append(f"\\newcommand{{\\BLprecisionHi}}{{{_fmt(bprec['ci_high'],2)}}}")
         m.append(f"\\newcommand{{\\BLfpr}}{{{_fmt(bfpr['point'],2)}}}")
         m.append(f"\\newcommand{{\\BLfnr}}{{{_fmt(bdet['fnr']['point'],2)}}}")
-        m.append(f"\\newcommand{{\\BLcalls}}{{{bl['model_calls']}}}")
+        m.append(f"\\newcommand{{\\BLcalls}}{{{_grouped(bl['model_calls'])}}}")
         m.append(f"\\newcommand{{\\BLjudge}}{{{bl['judge_model'].split('/')[-1]}}}")
 
     # RAGOrigin responsibility-attribution baseline (identical suspects)
@@ -99,20 +104,20 @@ def main() -> int:
         m.append(f"\\newcommand{{\\ROprecisionHi}}{{{_fmt(rprec['ci_high'],2)}}}")
         m.append(f"\\newcommand{{\\ROfpr}}{{{_fmt(rfpr['point'],2)}}}")
         m.append(f"\\newcommand{{\\ROfnr}}{{{_fmt(rodet['fnr']['point'],2)}}}")
-        m.append(f"\\newcommand{{\\ROcalls}}{{{ro['model_calls']}}}")
+        m.append(f"\\newcommand{{\\ROcalls}}{{{_grouped(ro['model_calls'])}}}")
         m.append(f"\\newcommand{{\\ROproxy}}{{{ro['proxy_model'].split('/')[-1]}}}")
         m.append(f"\\newcommand{{\\ROlatTotal}}{{{_fmt(ro['latency_s_total'],0)}}}")
         m.append(f"\\newcommand{{\\ROperSus}}{{{_fmt(ro['latency_s_per_suspect']*1000,1)}}}")  # ms
 
     if head:
         rt_ms = head["ragtrap_latency_s_total"] * 1000
-        m.append(f"\\newcommand{{\\LatSpeedup}}{{{_fmt(head['latency_speedup'],0)}}}")
+        m.append(f"\\newcommand{{\\LatSpeedup}}{{{_grouped(head['latency_speedup'])}}}")
         m.append(f"\\newcommand{{\\RTlatTotal}}{{{_fmt(rt_ms,1)}}}")  # ms
         m.append(f"\\newcommand{{\\BLlatTotal}}{{{_fmt(head['baseline_latency_s_total'],0)}}}")
         m.append(f"\\newcommand{{\\BLperSus}}{{{_fmt(head['baseline_per_suspect_s'],1)}}}")
         if ro.get("latency_s_total"):
             ro_speedup = ro["latency_s_total"] / head["ragtrap_latency_s_total"]
-            m.append(f"\\newcommand{{\\LatSpeedupRO}}{{{_fmt(ro_speedup,0)}}}")
+            m.append(f"\\newcommand{{\\LatSpeedupRO}}{{{_grouped(ro_speedup)}}}")
 
     # ---- scaling (E2/E4) ----
     pts = scaling.get("scale_points", [])
@@ -141,9 +146,6 @@ def main() -> int:
         body = " \\\\\n".join(rows) + "%\n"
         (RESULTS / "scaling_rows.tex").write_text(body, encoding="utf-8")
 
-        def _grouped(n: int) -> str:
-            return f"{n:,}".replace(",", "{,}")
-
         full = pts[-1]
         m.append(f"\\newcommand{{\\FullPassages}}{{{_grouped(full['n_clean_passages'])}}}")
         m.append(f"\\newcommand{{\\FullChunks}}{{{_grouped(full['n_chunks'])}}}")
@@ -151,10 +153,14 @@ def main() -> int:
         # so \EdLatency/\EdThroughput stay consistent with \HmacLatency/\EdOverHmac, which
         # are measured in that same run rather than from the scale-sweep point.
         m.append(f"\\newcommand{{\\EdRecord}}{{{_fmt(full['mean_record_bytes'],0)}}}")
+        # Record storage at scale, decimal units, derived from the same mean record size.
+        _rec = round(full["mean_record_bytes"])
+        m.append(f"\\newcommand{{\\EdRecordMillion}}{{{_fmt(_rec * 1e6 / 1e6, 0)}\\,MB}}")
+        m.append(f"\\newcommand{{\\EdRecordHundredMillion}}{{{_fmt(_rec * 1e8 / 1e9, 1)}\\,GB}}")
         m.append(f"\\newcommand{{\\RevChunks}}{{{full['revoked_chunks']}}}")
         m.append(f"\\newcommand{{\\FullRevMttr}}{{{full['revoke_mttr_s']*1e6:.1f}}}")  # us
         m.append(f"\\newcommand{{\\FullManMttr}}{{{full['manual_mttr_s']*1000:.0f}}}")  # ms
-        m.append(f"\\newcommand{{\\FullMttrRatio}}{{{_fmt(full['mttr_ratio'],0)}}}")
+        m.append(f"\\newcommand{{\\FullMttrRatio}}{{{_grouped(full['mttr_ratio'])}}}")
         # smallest point for the growth statement
         small = pts[0]
         m.append(f"\\newcommand{{\\SmallPassages}}{{{_grouped(small['n_clean_passages'])}}}")
@@ -168,7 +174,7 @@ def main() -> int:
         # Per-chunk signing-cost trio from one measurement (same Ed25519 vs HMAC run), so
         # \EdOverHmac == \EdLatency / \HmacLatency to one decimal.
         m.append(f"\\newcommand{{\\EdLatency}}{{{_fmt(ed['mean_sign_latency_us'],1)}}}")
-        m.append(f"\\newcommand{{\\EdThroughput}}{{{_fmt(1e6/ed['mean_sign_latency_us'],0)}}}")
+        m.append(f"\\newcommand{{\\EdThroughput}}{{{_grouped(1e6/ed['mean_sign_latency_us'])}}}")
         m.append(f"\\newcommand{{\\HmacLatency}}{{{_fmt(hm['mean_sign_latency_us'],1)}}}")
         m.append(f"\\newcommand{{\\EdOverHmac}}{{{_fmt(sb['ed25519_over_hmac_time'],1)}}}")
 
@@ -180,13 +186,13 @@ def main() -> int:
         m.append(f"\\newcommand{{\\PerDocFP}}{{{_fmt(pd['point'],2)}}}")
         m.append(f"\\newcommand{{\\PerDocFPLo}}{{{_fmt(pd['ci_low'],2)}}}")
         m.append(f"\\newcommand{{\\PerDocFPHi}}{{{_fmt(pd['ci_high'],2)}}}")
-        m.append(f"\\newcommand{{\\PerDocPurged}}{{{e3['per_document']['total_purged']}}}")
+        m.append(f"\\newcommand{{\\PerDocPurged}}{{{_grouped(e3['per_document']['total_purged'])}}}")
         m.append(f"\\newcommand{{\\PerDocFalse}}{{{e3['per_document']['false_purged_clean']}}}")
         m.append(f"\\newcommand{{\\PerChunkFP}}{{{_fmt(e3['per_chunk']['false_purge_rate']['point'],2)}}}")
         # Per-chunk collateral is MEASURED (clean chunks removed by per-chunk revocation), not
         # asserted; \PerChunkFalse is that raw count and is 0 by the per-chunk design here.
         m.append(f"\\newcommand{{\\PerChunkFalse}}{{{e3['per_chunk']['false_purged_clean']}}}")
-        m.append(f"\\newcommand{{\\PerChunkPurged}}{{{e3['per_chunk']['total_purged']}}}")
+        m.append(f"\\newcommand{{\\PerChunkPurged}}{{{_grouped(e3['per_chunk']['total_purged'])}}}")
         m.append(f"\\newcommand{{\\PoisonPerDoc}}{{{e3['poison_per_doc']}}}")
 
     # ---- E3 poison-per-doc sensitivity sweep ----
@@ -202,7 +208,7 @@ def main() -> int:
             m.append(f"\\newcommand{{\\SweepPerDocFP{tag}}}{{{_fmt(r['point'],2)}}}")
             m.append(f"\\newcommand{{\\SweepPerDocFP{tag}Lo}}{{{_fmt(r['ci_low'],2)}}}")
             m.append(f"\\newcommand{{\\SweepPerDocFP{tag}Hi}}{{{_fmt(r['ci_high'],2)}}}")
-            m.append(f"\\newcommand{{\\SweepPerDocPurged{tag}}}{{{p['per_document_total_purged']}}}")
+            m.append(f"\\newcommand{{\\SweepPerDocPurged{tag}}}{{{_grouped(p['per_document_total_purged'])}}}")
 
     # ---- E5 ASR ----
     e5 = aux.get("E5", {})

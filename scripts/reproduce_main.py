@@ -194,7 +194,7 @@ def run_full(args, fast_out: dict) -> None:
     )
 
     _section("FULL E0/E3/E5 (granularity on full corpus + attack-success context)")
-    e3_docs = str(args.quick_questions) if args.quick else "200"
+    e3_docs = str(args.quick_questions) if args.quick else str(args.e3_docs)
     subprocess.run(
         [py, str(REPO_ROOT / "scripts" / "run_e0_e3_e5.py"),
          "--parquet", parquet, "--poisonedrag", args.poisonedrag,
