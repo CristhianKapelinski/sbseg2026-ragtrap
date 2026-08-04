@@ -2,10 +2,10 @@
 
 Subcommands:
 
-* ``run-experiments`` -- run the runnable experiments (E0-E4), write ``results/results.json``
-  and the run manifest, and append the PENDING descriptors (E5-E7). This is the main-claim
-  reproduction path used by artifact evaluation.
-* ``selftest`` -- run only E0 (instrument validation on synthetic data) for a fast smoke test.
+* ``run-experiments`` -- run the runnable experiments (check, Exp. 1-Exp. 2 plus scaling), write
+  ``results/results.json`` and the run manifest. This is the main-claim reproduction path used by
+  artifact evaluation.
+* ``selftest`` -- run only the instrument check (validation on synthetic data) for a fast smoke test.
 * ``demo`` -- a minimal end-to-end demonstration of ingest -> traceback -> revoke-source on a
   small synthetic corpus, printing the indexed lookup and the one-command purge.
 
@@ -68,14 +68,15 @@ def cmd_run_experiments(args: argparse.Namespace) -> int:
 
     results = run_all_runnable(cfg)
 
-    # Record the synthetic E0 corpus in the manifest. The real third-party corpora and attack data
-    # are pinned by digest by the dedicated evaluation scripts (see scripts/run_real_eval.py and
-    # scripts/run_scaling.py), which write results/{real_results,scaling_results,aux_results}.json.
+    # Record the synthetic instrument-check corpus in the manifest. The real third-party corpora and
+    # attack data are pinned by digest by the dedicated evaluation scripts (see
+    # scripts/run_real_eval.py and scripts/run_scaling.py), which write
+    # results/{real_results,scaling_results,aux_results}.json.
     e0_chunks = generate_corpus(
         n_chunks=200, n_principals=5, poison_fraction=0.1, seed=cfg.seed, poisoned_principals=1
     )
     manifest.add_corpus_input(
-        "e0_synthetic", e0_chunks, description="E0 synthetic corpus (labelled)"
+        "e0_synthetic", e0_chunks, description="check synthetic corpus (labelled)"
     )
 
     results_path = cfg.results_dir / "e0_results.json"
@@ -97,10 +98,10 @@ def cmd_selftest(args: argparse.Namespace) -> int:
     cfg = load_config()
     cfg.ensure_dirs()
     logger, log_path = setup_logging(cfg.logs_dir)
-    logger.info("RAGtrap %s selftest (E0 instrument validation)", __version__)
-    from .experiments import run_e0
+    logger.info("RAGtrap %s selftest (instrument check)", __version__)
+    from .experiments import run_check
 
-    result = run_e0(cfg)
+    result = run_check(cfg)
     print(json.dumps(result, indent=2))
     ok = bool(result.get("instrument_valid"))
     logger.info("Selftest %s", "PASSED" if ok else "FAILED")
@@ -142,10 +143,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"ragtrap {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_run = sub.add_parser("run-experiments", help="run E0-E4 and write results + manifest")
+    p_run = sub.add_parser("run-experiments", help="run instrument check + Exp. 1-2 and write results + manifest")
     p_run.set_defaults(func=cmd_run_experiments)
 
-    p_self = sub.add_parser("selftest", help="fast E0 instrument-validation smoke test")
+    p_self = sub.add_parser("selftest", help="fast instrument-check validation smoke test")
     p_self.set_defaults(func=cmd_selftest)
 
     p_demo = sub.add_parser("demo", help="minimal end-to-end ingest/traceback/revoke demo")

@@ -1,15 +1,15 @@
-"""E0 instrument validation (the deterministic correctness property).
+"""Instrument validation — "check" (the deterministic correctness property).
 
-E0 establishes that the instrument is correct before any real-data measurement: on a labelled
-synthetic corpus, every signed record verifies, a tampered message is rejected, hash-keyed
-traceback recovers the injected attribution exactly, and ``revoke-source`` purges exactly the
-targeted principal's chunks and no others. This is a by-construction correctness guarantee, not a
-statistical detection rate, and is framed as such.
+This module implements the paper's instrument check: on a labelled synthetic corpus, every signed
+record verifies, a tampered message is rejected, hash-keyed traceback recovers the injected
+attribution exactly, and ``revoke-source`` purges exactly the targeted principal's chunks and no
+others. This is a by-construction correctness guarantee, not a statistical detection rate, and is
+framed as such.
 
 The real, non-circular experiments on third-party PoisonedRAG / RAGOrigin data live in the
 ``ragtrap.realeval`` / ``ragtrap.realeval3`` / ``ragtrap.scaling`` / ``ragtrap.asr`` modules and
-are driven by the scripts under ``scripts/``; ``run_all_runnable`` reports E0 plus the resolved
-configuration and environment.
+are driven by the scripts under ``scripts/``; ``run_all_runnable`` reports the instrument check
+plus the resolved configuration and environment.
 """
 
 from __future__ import annotations
@@ -36,9 +36,9 @@ def _env_block() -> dict[str, object]:
     }
 
 
-def run_e0(cfg: Config) -> dict[str, object]:
-    """E0 -- instrument validation on synthetic data (correctness, not performance)."""
-    log.info("E0: instrument validation on synthetic data (labelled synthetic)")
+def run_check(cfg: Config) -> dict[str, object]:
+    """Instrument check -- instrument validation on synthetic data (correctness, not performance)."""
+    log.info("check: instrument validation on synthetic data (labelled synthetic)")
     chunks = generate_corpus(
         n_chunks=200, n_principals=5, poison_fraction=0.1, seed=cfg.seed, poisoned_principals=1
     )
@@ -69,7 +69,7 @@ def run_e0(cfg: Config) -> dict[str, object]:
     no_collateral = (before - after) == len(expected_purge)
 
     result = {
-        "experiment": "E0",
+        "experiment": "check",
         "data": "synthetic (labelled)",
         "n_chunks": len(chunks),
         "all_records_verify": all_verify,
@@ -83,16 +83,16 @@ def run_e0(cfg: Config) -> dict[str, object]:
             all_verify and tampered_detected and recall == 1.0 and purged_exactly and no_collateral
         ),
     }
-    log.info("E0 result: %s", result)
+    log.info("check result: %s", result)
     return result
 
 
 def run_all_runnable(cfg: Config) -> dict[str, object]:
-    """Report E0 plus the resolved configuration and environment.
+    """Report the instrument check plus the resolved configuration and environment.
 
-    The paper's real-data experiments (E2 attribution, E3 revocation, and E4 attack context) are
-    run by dedicated scripts; this function provides the E1 instrument-validation property.
+    The paper's real-data experiments (Exp. 1 attribution, Exp. 2 revocation, and Exp. 3 attack
+    context) are run by dedicated scripts; this function provides the instrument-validation property.
     """
     out: dict[str, object] = {"environment": _env_block(), "config": cfg.as_dict()}
-    out["E0"] = run_e0(cfg)
+    out["check"] = run_check(cfg)
     return out

@@ -1,4 +1,6 @@
-"""End-to-end PoisonedRAG attack-success positioning (E5).
+"""End-to-end PoisonedRAG attack-success positioning.
+
+This module implements the paper's Exp. 3 (attack success on generated answers).
 
 This confirms the suspects RAGtrap attributes are genuinely dangerous, not inert: it feeds the
 real top-k retrieved contexts (the same poisoned-plus-clean set from the RAGOrigin feedback) to a
@@ -68,7 +70,7 @@ def run_asr(
         if _answer_matches(answer, q.correct_answer):
             correct_hits += 1
     return {
-        "experiment": "E5_asr",
+        "experiment": "exp3_asr",
         "generation_model": judge.model_name,
         "n_questions": n,
         "top_k": top_k,

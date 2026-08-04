@@ -1,4 +1,6 @@
-"""E3: source-indexed revocation versus document-level purging.
+"""Exp. 2: source-indexed revocation versus document-level purging.
+
+This module implements the paper's Exp. 2 (revocation / false purge).
 
 A partially-poisoned document combines chunks from a benign BEIR NQ source with adversarial
 passages supplied by one compromised source. The experiment compares two recovery operations:
@@ -12,7 +14,7 @@ select the chunks to remove.
 We sample many such documents and report the false-purge rate of each scheme with a 95% Wilson
 CI over the pooled removed chunks, so the contrast is an interval, not a single hand-built number.
 The per-document rate depends on how many adversarial passages the attacker injects per document
-(``poison_per_doc``); :func:`sweep_e3_poison_per_doc` re-runs the contrast over a sweep of that
+(``poison_per_doc``); :func:`sweep_exp2_poison_per_doc` re-runs the contrast over a sweep of that
 parameter, on the same real BEIR passages, so the headline rate is shown to be specific to the
 chosen injection budget and the trend is visible.
 """
@@ -57,7 +59,7 @@ def _build_mixed_document(
     return clean + poison
 
 
-def run_e3_granularity(
+def run_exp2_granularity(
     parquet_path: str,
     poison_pool: list[str],
     *,
@@ -123,7 +125,7 @@ def run_e3_granularity(
         per_chunk_poison_total += n_poison
 
     return {
-        "experiment": "E3_granularity",
+        "experiment": "exp2_granularity",
         "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
         "n_documents": docs_used,
         "poison_per_doc": poison_per_doc,
@@ -150,7 +152,7 @@ def run_e3_granularity(
     }
 
 
-def sweep_e3_poison_per_doc(
+def sweep_exp2_poison_per_doc(
     parquet_path: str,
     poison_pool: list[str],
     *,
@@ -173,7 +175,7 @@ def sweep_e3_poison_per_doc(
 
     points: list[dict[str, object]] = []
     for ppd in poison_per_doc_values:
-        res = run_e3_granularity(
+        res = run_exp2_granularity(
             parquet_path,
             poison_pool,
             n_documents=n_documents,
@@ -199,7 +201,7 @@ def sweep_e3_poison_per_doc(
         )
 
     return {
-        "experiment": "E3_poison_per_doc_sweep",
+        "experiment": "exp2_poison_per_doc_sweep",
         "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
         "poison_per_doc_values": list(poison_per_doc_values),
         "points": points,

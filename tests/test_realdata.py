@@ -17,7 +17,7 @@ from ragtrap.realeval import (
     ATTACKER_PRINCIPAL,
     ConfusionCounts,
     build_corpus_from_feedback,
-    run_e1_ragtrap,
+    run_exp1_ragtrap,
 )
 from ragtrap.stats import bootstrap_ci, wilson
 
@@ -103,12 +103,12 @@ def test_ragtrap_e1_by_construction_and_drift(tmp_path):
     _write_feedback(fp)
     fb = load_ragorigin_feedback(fp)
     # no drift: exact-hash recovery is a deterministic correctness property -> recall 1.0
-    clean = run_e1_ragtrap(fb, top_k=4, drift_fraction=0.0, repeats=2)
+    clean = run_exp1_ragtrap(fb, top_k=4, drift_fraction=0.0, repeats=2)
     assert clean["detection"]["recall"]["point"] == 1.0
     assert clean["detection"]["precision"]["point"] == 1.0
     assert clean["detection"]["fpr"]["point"] == 0.0
     # full drift on poison -> all poison suspects miss the hash -> recall 0, precision still exact
-    drift = run_e1_ragtrap(fb, top_k=4, drift_fraction=1.0, repeats=1, seed=7)
+    drift = run_exp1_ragtrap(fb, top_k=4, drift_fraction=1.0, repeats=1, seed=7)
     assert drift["n_drifted"] >= 1
     assert drift["detection"]["recall"]["point"] < 1.0
     # precision is exact even under drift (no false positives from a hash match)

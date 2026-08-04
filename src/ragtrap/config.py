@@ -44,7 +44,7 @@ class Config:
     results_dir: Path = field(default_factory=lambda: _env_path("RESULTS_DIR", "results"))
 
     # Signing backend: "ed25519" (real public-key, default) or "hmac" (symmetric stand-in,
-    # used only to quantify the cost of real crypto in E4).
+    # used only to quantify the cost of real crypto in the scaling sweep).
     signer: str = field(default_factory=lambda: _env_str("SIGNER", "ed25519"))
 
     # Chunking parameters for the ingestion gate.

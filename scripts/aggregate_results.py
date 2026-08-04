@@ -1,7 +1,7 @@
 """Aggregate all experiment outputs into results/results.json and a LaTeX macro block.
 
-Reads results/real_results.json (E1 + baseline), results/scaling_results.json (E2/E4 sweep),
-results/aux_results.json (E0, E3, E5) and emits:
+Reads results/real_results.json (Exp. 1 + baseline), results/scaling_results.json (Exp. 1 scaling sweep),
+results/aux_results.json (check, exp2, exp3) and emits:
 
 * results/results.json   -- the single canonical results bundle the paper draws from;
 * results/macros.tex      -- a \newcommand block; every number in the paper body comes from here.
@@ -38,14 +38,14 @@ def main() -> int:
     scaling = _load("scaling_results.json")
     aux = _load("aux_results.json")
 
-    bundle = {"E1_real": real, "scaling": scaling, "aux": aux}
+    bundle = {"exp1_real": real, "scaling": scaling, "aux": aux}
     (RESULTS / "results.json").write_text(json.dumps(bundle, indent=2), encoding="utf-8")
 
     m: list[str] = []
     m.append("% ===== AUTO-GENERATED RESULTS MACROS (scripts/aggregate_results.py) =====")
     m.append("% Every empirical number in the paper body is defined here, from results/*.json.")
 
-    # ---- E1 headline (top-k detection + latency) ----
+    # ---- Exp. 1 headline (top-k detection + latency) ----
     rt = real.get("ragtrap", {})
     bl = real.get("baseline", {})
     ro = real.get("baseline_ragorigin", {})
@@ -119,7 +119,7 @@ def main() -> int:
             ro_speedup = ro["latency_s_total"] / head["ragtrap_latency_s_total"]
             m.append(f"\\newcommand{{\\LatSpeedupRO}}{{{_grouped(ro_speedup)}}}")
 
-    # ---- scaling (E2/E4) ----
+    # ---- scaling (Exp. 1 full-corpus sweep) ----
     pts = scaling.get("scale_points", [])
     if pts:
         # scaling table rows
@@ -178,8 +178,8 @@ def main() -> int:
         m.append(f"\\newcommand{{\\HmacLatency}}{{{_fmt(hm['mean_sign_latency_us'],1)}}}")
         m.append(f"\\newcommand{{\\EdOverHmac}}{{{_fmt(sb['ed25519_over_hmac_time'],1)}}}")
 
-    # ---- E3 granularity ----
-    e3 = aux.get("E3", {})
+    # ---- Exp. 2 granularity ----
+    e3 = aux.get("exp2", {})
     if e3:
         m.append(f"\\newcommand{{\\EThreeDocs}}{{{e3['n_documents']}}}")
         pd = e3["per_document"]["false_purge_rate"]
@@ -195,9 +195,9 @@ def main() -> int:
         m.append(f"\\newcommand{{\\PerChunkPurged}}{{{_grouped(e3['per_chunk']['total_purged'])}}}")
         m.append(f"\\newcommand{{\\PoisonPerDoc}}{{{e3['poison_per_doc']}}}")
 
-    # ---- E3 poison-per-doc sensitivity sweep ----
+    # ---- Exp. 2 poison-per-doc sensitivity sweep ----
     # Macro names cannot contain digits, so poison_per_doc {1,2,3,5} -> {One,Two,Three,Five}.
-    sweep = aux.get("E3_sweep", {})
+    sweep = aux.get("exp2_sweep", {})
     if sweep:
         _ppd_tag = {1: "One", 2: "Two", 3: "Three", 5: "Five"}
         for p in sweep.get("points", []):
@@ -210,8 +210,8 @@ def main() -> int:
             m.append(f"\\newcommand{{\\SweepPerDocFP{tag}Hi}}{{{_fmt(r['ci_high'],2)}}}")
             m.append(f"\\newcommand{{\\SweepPerDocPurged{tag}}}{{{_grouped(p['per_document_total_purged'])}}}")
 
-    # ---- E5 ASR ----
-    e5 = aux.get("E5", {})
+    # ---- Exp. 3 ASR ----
+    e5 = aux.get("exp3", {})
     if e5:
         asr = e5["attack_success"]
         m.append(f"\\newcommand{{\\AsrPoint}}{{{_fmt(asr['point']*100,0)}}}")
@@ -221,8 +221,8 @@ def main() -> int:
         m.append(f"\\newcommand{{\\AsrTopK}}{{{e5['top_k']}}}")
         m.append(f"\\newcommand{{\\AsrGen}}{{{e5['generation_model'].split('/')[-1]}}}")
 
-    # ---- E0 ----
-    e0 = aux.get("E0", {})
+    # ---- check ----
+    e0 = aux.get("check", {})
     if e0:
         m.append(f"\\newcommand{{\\EZeroChunks}}{{{e0['n_chunks']}}}")
         m.append(f"\\newcommand{{\\EZeroPurged}}{{{e0['chunks_purged']}}}")

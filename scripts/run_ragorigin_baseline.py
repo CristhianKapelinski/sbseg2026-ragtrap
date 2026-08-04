@@ -21,7 +21,7 @@ from ragtrap.realdata import (
     RAGORIGIN_FEEDBACK_SHA256,
     load_ragorigin_feedback,
 )
-from ragtrap.realeval import run_e1_baseline_ragorigin
+from ragtrap.realeval import run_exp1_baseline_ragorigin
 
 
 def main() -> int:
@@ -38,7 +38,7 @@ def main() -> int:
           f"running RAGOrigin scoring over top-{args.top_k} suspects "
           f"with proxy {args.proxy_model} ...", flush=True)
 
-    res = run_e1_baseline_ragorigin(
+    res = run_exp1_baseline_ragorigin(
         fb,
         proxy_model=args.proxy_model,
         top_k=args.top_k,

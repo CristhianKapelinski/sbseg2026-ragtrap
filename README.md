@@ -18,7 +18,7 @@ RAGtrap is a recovery layer for retrieval-augmented-generation (RAG) corpora. It
 | [Security Concerns](#security-concerns) | What runs locally, where keys/data live, network use |
 | [Installation](#installation) | Get the artifact, install uv, `uv sync` |
 | [Minimal Test](#minimal-test) | One-command end-to-end functional check (~1 s) |
-| [Experiments](#experiments) | Reproduction of the paper's four claims (E1–E4) |
+| [Experiments](#experiments) | Reproduction of the paper's claims (check + Exp. 1-3) |
 | [License](#license) | Licensing information |
 
 ---
@@ -42,7 +42,7 @@ The seals considered are: **Available (SeloD)**, **Functional (SeloF)**, **Susta
 | **Python** | 3.10+ (validated on 3.12 and 3.13), managed by [`uv`](https://astral.sh/uv) |
 | **RAM** | Fast path: < 1 GB. Full `--full` scaling point builds ~4.4M signed records and uses up to ~10 GB |
 | **Disk** | `.venv` after `uv sync`: ~333 MB; fast path adds nothing (337 KB sample ships in git). `--full` adds ~764 MB (BEIR corpus) + a few GB (local model) under `$RAGTRAP_DATA_ROOT` |
-| **GPU** | **Not required** for the minimal test or the main claim. Only the `--full` model-served baselines (E2 LLM judge / RAGOrigin proxy, E4 generation) use a single CUDA GPU |
+| **GPU** | **Not required** for the minimal test or the main claim. Only the `--full` model-served baselines (Exp. 1 LLM judge / RAGOrigin proxy, Exp. 3 generation) use a single CUDA GPU |
 | **Reference machine** | x86_64, 32 GB RAM, Python 3.13, no GPU — minimal test ~1 s, fast main experiment ~10 s |
 
 ---
@@ -107,7 +107,7 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 
 ## Experiments
 
-The paper has four experiments; instrument validation (E1) is covered by the [Minimal Test](#minimal-test). The **main claim is \#2** (source-indexed revocation versus document-level false purge), reproduced together with Claim \#1 by the fast, model-free [`scripts/experiment_main.sh`](scripts/experiment_main.sh) into `results/main_results.json`.
+The paper has four experiments. The instrument check is covered by the [Minimal Test](#minimal-test). The **main claim is \#2** (source-indexed revocation versus document-level false purge), reproduced together with Claim \#1 by the fast, model-free [`scripts/experiment_main.sh`](scripts/experiment_main.sh) into `results/main_results.json`.
 
 Each claim below is **one command** and defaults to a **fast variant**. The slow, GPU + model-served full run is gated behind `--full`; a reviewer who does not run it may instead inspect the pre-computed, real outputs already committed under [`results/`](results/) (`results.json`, `*_results.json`, `macros.tex`).
 
@@ -116,6 +116,15 @@ Each claim below is **one command** and defaults to a **fast variant**. The slow
 > ./scripts/experiment_main.sh
 > ```
 > **Measured on the reference machine: ~10 s** (CPU only; the one-time ~6 MB input fetch is included). Writes `results/main_results.json`.
+
+### Experiment mapping
+
+| Paper label | Code identifier | What it measures |
+|---|---|---|
+| check | `check` | Instrument validation on synthetic data (verify, tamper-detect, attribute, revoke) |
+| Exp. 1 | `exp1` | Attribution cost + drift sensitivity (RAGtrap indexed lookup vs LLM-judge and RAGOrigin baselines) |
+| Exp. 2 | `exp2` | Source revocation / false purge (per-document vs per-chunk granularity) |
+| Exp. 3 | `exp3` | Attack success on generated answers (end-to-end ASR context) |
 
 ## Claim \#1 — Forensic-time attribution and drift sensitivity
 

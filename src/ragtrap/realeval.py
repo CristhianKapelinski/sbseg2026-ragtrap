@@ -1,5 +1,7 @@
 """Real, non-circular evaluation on third-party PoisonedRAG / RAGOrigin data.
 
+This module implements the paper's Exp. 1 (attribution cost and drift sensitivity).
+
 The substrate is the RAGOrigin released feedback file: for 100 NQ questions, the top-100 contexts
 surfaced by the real ``intfloat/e5`` dense retriever, each with a third-party ground-truth label
 (poisoned vs clean) and the real PoisonedRAG adversarial text. None of it is authored here.
@@ -19,7 +21,7 @@ list:
   local GPU model over the same contexts; see :mod:`ragtrap.llm_judge`.
 * **RAGOrigin (baseline)**: the published responsibility-attribution scoring (proxy-LLM
   answer/question loss plus retrieval score, z-normalized and K-means thresholded), run on a local
-  GPU proxy over the same contexts; see :func:`run_e1_baseline_ragorigin`.
+  GPU proxy over the same contexts; see :func:`run_exp1_baseline_ragorigin`.
 
 Drift split. A configurable fraction of the *poisoned* suspects are paraphrased after ingestion so
 their retrieved bytes differ from the sealed bytes. A hash lookup cannot match a paraphrase, so
@@ -102,7 +104,7 @@ def _paraphrase(text: str, rng: random.Random) -> str:
     return rng.choice(prefixes) + body + rng.choice(suffixes)
 
 
-# --------------------------------------------------------------------------------------------- E1
+# ----------------------------------------------------------------------------------------- Exp. 1
 @dataclass
 class ConfusionCounts:
     """Pooled confusion counts over contexts judged poisoned (positive) vs clean (negative)."""
@@ -140,7 +142,7 @@ class ConfusionCounts:
         }
 
 
-def run_e1_ragtrap(
+def run_exp1_ragtrap(
     feedback,
     *,
     top_k: int = 5,
@@ -223,7 +225,7 @@ def run_e1_ragtrap(
     }
 
 
-def run_e1_baseline_ragorigin(
+def run_exp1_baseline_ragorigin(
     feedback,
     *,
     proxy_model: str = "Qwen/Qwen2.5-3B-Instruct",
@@ -332,7 +334,7 @@ def run_e1_baseline_ragorigin(
     }
 
 
-def run_e1_baseline_judge(
+def run_exp1_baseline_judge(
     feedback,
     judge: LocalLLMJudge,
     *,

@@ -26,7 +26,7 @@ class Chunk:
     principal: str
     #: ground-truth label used only for evaluation/recall; never trusted at ingestion.
     is_poisoned: bool = False
-    #: identifier of the parent document (enables the per-document granularity contrast, E3).
+    #: identifier of the parent document (enables the per-document granularity contrast, Exp. 2).
     document_id: str = ""
 
 
@@ -43,7 +43,7 @@ class ProvenanceRecord:
     signer_name: str
     signer_identity: str
     signature_hex: str
-    #: "chunk" (RAGtrap default) or "document" (the per-document contrast configuration, E3).
+    #: "chunk" (RAGtrap default) or "document" (the per-document contrast configuration, Exp. 2).
     granularity: str = "chunk"
 
     def signed_payload(self) -> dict[str, object]:
@@ -73,7 +73,7 @@ def canonical_message(payload: dict[str, object]) -> bytes:
 
 @dataclass
 class StorageStats:
-    """Accounting for signed-record storage cost (used by E4)."""
+    """Accounting for signed-record storage cost (used by the scaling sweep)."""
 
     n_records: int = 0
     total_record_bytes: int = 0

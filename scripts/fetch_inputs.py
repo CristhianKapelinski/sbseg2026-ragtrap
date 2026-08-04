@@ -10,11 +10,11 @@ pinned SHA-256 (a mismatch is a hard error, so a result never flows from the wro
 2. PoisonedRAG released adversarial passages (the attack) -- ``results/adv_targeted_results/
    nq.json`` from github.com/sleeepeer/PoisonedRAG (sparse blobless clone, ~120 KB).
 
-The clean BEIR/nq substrate for the fast E3 false-purge contrast is the frozen sample shipped in
+The clean BEIR/nq substrate for the fast Exp. 2 false-purge contrast is the frozen sample shipped in
 the repo (``data/beir_nq_sample.parquet``), so the fast path needs no large download.
 
 ``--full`` additionally downloads the complete 2,681,468-passage BEIR/nq corpus parquet (~764 MB)
-from the Hugging Face mirror, which the full-corpus scaling sweep (E2/E4) consumes.
+from the Hugging Face mirror, which the full-corpus scaling sweep (Exp. 1) consumes.
 
 All paths default under ``$RAGTRAP_DATA_ROOT`` so heavy data lives off the repository tree.
 Outputs (for the caller / reproduce.sh) are printed as ``KEY=path`` lines at the end.

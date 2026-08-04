@@ -6,7 +6,7 @@ Two backends implement :class:`Signer`:
   non-repudiable: anyone holding the public key can verify a record without the private key.
 * :class:`HmacSigner` -- a symmetric HMAC-SHA256 stand-in. This reproduces the construction the
   closest prior artifact used in its evaluation ("Ed25519 simulated via HMAC") and exists only
-  so the cost and verifiability difference can be measured (experiment E4); it is NOT a
+  so the cost and verifiability difference can be measured (scaling sweep); it is NOT a
   recommended deployment mode, because the verifier must hold the secret key.
 
 The signed message is a canonical byte string over the provenance tuple (see ``records.py``),

@@ -18,7 +18,7 @@
   "inputs": {
     "e0_synthetic": {
       "sha256": "c4fc6142d6d8997a2e989d5a899ef01658cbd82a713fe9e1cf9872fa1e962de5",
-      "description": "E0 synthetic corpus (labelled)",
+      "description": "check synthetic corpus (labelled)",
       "n_chunks": 200,
       "n_principals": 5,
       "n_poisoned": 20

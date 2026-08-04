@@ -1,6 +1,6 @@
-"""Run the real, non-circular E1 evaluation and write results/real_results.json.
+"""Run the real, non-circular Exp. 1 evaluation and write results/real_results.json.
 
-E1 compares, on the *identical* third-party suspect set (RAGOrigin released e5-retrieval feedback
+Exp. 1 compares, on the *identical* third-party suspect set (RAGOrigin released e5-retrieval feedback
 over PoisonedRAG's NQ attack), RAGtrap's indexed content-hash lookup against the published
 RAGForensics LLM-judge baseline (run on a local model, so there is no API billing). Detection
 metrics carry 95% Wilson CIs; latency carries a bootstrap CI; the cost signal is the model-call
@@ -27,7 +27,7 @@ from ragtrap.realdata import (
     feedback_file_digest,
     load_ragorigin_feedback,
 )
-from ragtrap.realeval import run_e1_baseline_judge, run_e1_ragtrap
+from ragtrap.realeval import run_exp1_baseline_judge, run_exp1_ragtrap
 
 
 def main() -> int:
@@ -67,7 +67,7 @@ def main() -> int:
     rt: dict[str, object] = {}
     for d in drifts:
         key = f"drift_{d:g}"
-        rt[key] = run_e1_ragtrap(fb, top_k=args.top_k, drift_fraction=d, repeats=20)
+        rt[key] = run_exp1_ragtrap(fb, top_k=args.top_k, drift_fraction=d, repeats=20)
     out["ragtrap"] = rt
 
     # --- RAGForensics LLM judge baseline (slow) on identical suspects ---
@@ -78,7 +78,7 @@ def main() -> int:
         mq = None if args.baseline_questions == 0 else args.baseline_questions
         print(f"[{time.strftime('%H:%M:%S')}] running RAGForensics judge over top-{args.top_k} "
               f"suspects of {mq or len(fb)} questions ...", flush=True)
-        bl = run_e1_baseline_judge(
+        bl = run_exp1_baseline_judge(
             fb, judge, top_k=args.top_k, max_questions=mq
         )
         out["baseline"] = bl

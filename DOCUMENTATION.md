@@ -60,9 +60,9 @@ Modules: `config`, `logging_setup`, `hashing`, `signing` (Ed25519 + HMAC), `reco
 `datastore`, `gate`, `traceback` (the indexed lookup), `revocation` (batch revoke + manual
 baseline), `synthetic` (labelled generator for the instrument-validation run), `corpus` (BEIR
 loader), `realdata` (third-party PoisonedRAG/RAGOrigin loaders, pinned by SHA-256), `llm_judge`
-(the published RAGForensics judge served by a local model), `realeval` (E2: RAGtrap lookup, the
+(the published RAGForensics judge served by a local model), `realeval` (Exp. 1: RAGtrap lookup, the
 RAGForensics judge baseline, and the RAGOrigin responsibility-scoring baseline, all on identical
-suspects) / `realeval3`, `scaling` (E3 in-memory removal + ingestion cost), `asr` (E4),
+suspects) / `realeval3`, `scaling` (Exp. 2 in-memory removal + ingestion cost), `asr` (Exp. 3),
 `stats` (Wilson + bootstrap CIs), `manifest`, `experiments`. Console entry point: `ragtrap`.
 
 ### Reproducibility
@@ -81,7 +81,7 @@ so the repo holds only code, results, and the paper. One command runs everything
 | RAGOrigin feedback `k5_m5_e5_gpt-4o-mini.json` | github.com/zhangbl6618/RAG-Responsibility-Attribution | suspects + labels + the baseline's own input | `658419c9411ee685` |
 | BEIR `nq` corpus (2,681,468 passages) | HF `BeIR/nq` (config `corpus`) | clean substrate | parquet `num_rows=2681468` |
 | `intfloat/e5-base-v2` | HF | the dense retriever (third-party, as released the feedback was built with e5) | — |
-| `Qwen/Qwen2.5-3B-Instruct` | HF | local model serving the RAGForensics judge, the RAGOrigin proxy scorer, and the E4 generation | — |
+| `Qwen/Qwen2.5-3B-Instruct` | HF | local model serving the RAGForensics judge, the RAGOrigin proxy scorer, and the Exp. 3 generation | — |
 
 The RAGOrigin feedback is the key substrate: for each of 100 NQ target questions it carries the
 top-100 contexts surfaced by the real e5 retriever, each with a third-party poisoned/clean label
@@ -95,16 +95,25 @@ identical suspects.
 Run all: `bash scripts/reproduce.sh`. The RAGOrigin baseline is added by
 `scripts/run_ragorigin_baseline.py`. Per-experiment commands and outputs below; results land in
 `results/{e0_results,real_results,scaling_results,aux_results}.json` and are aggregated into
-`results/results.json` and `results/macros.tex`. The paper labels the four experiments E1-E4.
+`results/results.json` and `results/macros.tex`.
 
-### E1 -- Instrument validation
+### Experiment mapping
+
+| Paper label | Code identifier | What it measures |
+|---|---|---|
+| check | `check` | Instrument validation on synthetic data (verify, tamper-detect, attribute, revoke) |
+| Exp. 1 | `exp1` | Attribution cost + drift sensitivity (RAGtrap indexed lookup vs LLM-judge and RAGOrigin baselines) |
+| Exp. 2 | `exp2` | Source revocation / false purge (per-document vs per-chunk granularity) |
+| Exp. 3 | `exp3` | Attack success on generated answers (end-to-end ASR context) |
+
+### Instrument check
 
 Command: `ragtrap selftest`. On a labelled corpus of 200 chunks across 5 principals, all signed
 records verify, a tampered message is rejected, and `revoke-source` purges exactly the targeted
 principal's 20 chunks with no collateral removal (`instrument_valid: true`). This confirms the
 gate, signature verification, and the revocation index behave as specified before any comparison.
 
-### E2 -- Forensic-time attribution on the real attack (two baselines, identical suspects)
+### Exp. 1 -- Forensic-time attribution on the real attack (two baselines, identical suspects)
 
 Commands:
 ```
@@ -146,11 +155,11 @@ content-hash lookup per suspect (78.7 us/suspect), about **21026x** the judge la
 records with identical bytes agree on one source. Five poisoned suspects are ambiguous because
 the same bytes occur under different source identities.
 
-E2-drift: recall is 0.990 [0.977,0.996] without drift because five cross-source duplicates are
+Exp. 1 drift: recall is 0.990 [0.977,0.996] without drift because five cross-source duplicates are
 ambiguous. Rewriting a fraction `p` of poisoned suspects adds hash misses. Recall is 0.694
 [0.652,0.733] at p=0.3 and 0.504 [0.460,0.548] at p=0.5; returned attributions remain precise.
 
-### E3 -- Source revocation and in-memory removal cost
+### Exp. 2 -- Source revocation and in-memory removal cost
 
 Command:
 ```
@@ -171,7 +180,7 @@ to 782 ms at 4.36M chunks. The ratio is structural (O(revoked) vs O(corpus)) and
 corpus size (44x -> 627x -> 6977x -> 16931x). It excludes database persistence, network access,
 cache invalidation, and detector latency. Real Ed25519 per-chunk signing is ~69-90 us/chunk
 (11k-16k chunks/s single-threaded), about 1.9x the symmetric HMAC stand-in, in exchange for
-non-repudiable public-key provenance. E3 also contrasts source-indexed revocation with
+non-repudiable public-key provenance. Exp. 2 also contrasts source-indexed revocation with
 document-level purging. Each mixed document retains benign-source identities for its NQ chunks
 and assigns the injected PoisonedRAG passages to one compromised source. The
 per-document scheme over-purges clean fragments at a false-purge rate of **0.521** (95% Wilson CI
@@ -179,9 +188,9 @@ per-document scheme over-purges clean fragments at a false-purge rate of **0.521
 false-purge rate **0.000**. Poison labels evaluate collateral and recall but never select removals.
 Exact numbers are in `results/aux_results.json`.
 
-### E4 -- End-to-end attack-success context
+### Exp. 3 -- End-to-end attack-success context
 
-Command (part of `scripts/run_e0_e3_e5.py`). Feeding the top-5 retrieved contexts to a local
+Command (part of `scripts/run_check_exp2_exp3.py`). Feeding the top-5 retrieved contexts to a local
 Qwen2.5-3B-Instruct generation model and checking the answer: the attack steers it to the
 attacker's target answer in **98.0%** of the 100 questions (95% Wilson CI [0.930, 0.994]), with a
 0.0% correct-answer rate, confirming the suspects are genuinely dangerous. Exact numbers in
@@ -189,7 +198,7 @@ attacker's target answer in **98.0%** of the 100 questions (95% Wilson CI [0.930
 
 ## 6. Scope and future work
 
-RAGtrap's exact-hash attribution misses post-ingestion byte drift (quantified in E2-drift);
+RAGtrap's exact-hash attribution misses post-ingestion byte drift (quantified in Exp. 1 drift);
 recovering drifted variants needs near-duplicate or semantic matching. Adaptive and multi-attacker
 regimes, and the other corpora whose released attack data we also obtained (HotpotQA, MS-MARCO),
 are future work. Detection is out of scope and best-effort, with query-time filters as the

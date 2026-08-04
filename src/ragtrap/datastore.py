@@ -10,7 +10,7 @@ side indices avoid a corpus scan during traceback:
 * ``by_principal``: principal -> set of chunk_ids, so revoking a compromised source enumerates
   exactly its chunks in O(k) for k revoked chunks, without scanning the corpus.
 
-A document-granularity store (the per-document contrast for E3) reuses the same structure but is
+A document-granularity store (the per-document contrast for Exp. 2) reuses the same structure but is
 populated with one signed record per parent document; trust then propagates to that document's
 chunks. Both configurations are measured in-house; no external numbers are fabricated.
 """

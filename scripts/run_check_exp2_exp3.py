@@ -1,7 +1,8 @@
-"""Run E0 (instrument validation), E3 (granularity on real docs), E5 (end-to-end ASR).
+"""Run the instrument check, Exp. 2 (granularity on real docs), and Exp. 3 (end-to-end ASR).
 
-Writes results/aux_results.json. E0 is a deterministic correctness property (no LLM); E3 uses the
-real BEIR corpus + real PoisonedRAG passages (no LLM); E5 needs the local GPU generation model.
+Writes results/aux_results.json. The instrument check is a deterministic correctness property (no
+LLM); Exp. 2 uses the real BEIR corpus + real PoisonedRAG passages (no LLM); Exp. 3 needs the
+local GPU generation model.
 """
 
 from __future__ import annotations
@@ -11,14 +12,14 @@ import json
 from pathlib import Path
 
 from ragtrap.config import load_config
-from ragtrap.experiments import run_e0
+from ragtrap.experiments import run_check
 from ragtrap.realdata import (
     POISONEDRAG_SHA256,
     RAGORIGIN_FEEDBACK_SHA256,
     load_poisonedrag,
     load_ragorigin_feedback,
 )
-from ragtrap.realeval3 import run_e3_granularity, sweep_e3_poison_per_doc
+from ragtrap.realeval3 import run_exp2_granularity, sweep_exp2_poison_per_doc
 
 
 def main() -> int:
@@ -35,38 +36,38 @@ def main() -> int:
 
     out: dict[str, object] = {}
 
-    # E0 -- instrument validation (correctness property).
+    # Instrument check -- validation (correctness property).
     cfg = load_config()
-    out["E0"] = run_e0(cfg)
+    out["check"] = run_check(cfg)
 
-    # E3 -- per-chunk vs per-document granularity on real partially-poisoned documents.
+    # Exp. 2 -- per-chunk vs per-document granularity on real partially-poisoned documents.
     prag = load_poisonedrag(args.poisonedrag, dataset="nq")
     poison_pool = [t for e in prag for t in e.adv_texts]
-    out["E3"] = run_e3_granularity(
+    out["exp2"] = run_exp2_granularity(
         args.parquet, poison_pool, n_documents=args.e3_docs, poison_per_doc=3
     )
-    out["E3"]["poison_pool_sha256_pinned"] = POISONEDRAG_SHA256["nq"]
+    out["exp2"]["poison_pool_sha256_pinned"] = POISONEDRAG_SHA256["nq"]
 
-    # E3 sensitivity sweep -- false-purge rate vs injected adversarial passages per document.
-    out["E3_sweep"] = sweep_e3_poison_per_doc(
+    # Exp. 2 sensitivity sweep -- false-purge rate vs injected adversarial passages per document.
+    out["exp2_sweep"] = sweep_exp2_poison_per_doc(
         args.parquet, poison_pool, n_documents=args.e3_docs,
         poison_per_doc_values=(1, 2, 3, 5),
     )
-    out["E3_sweep"]["poison_pool_sha256_pinned"] = POISONEDRAG_SHA256["nq"]
+    out["exp2_sweep"]["poison_pool_sha256_pinned"] = POISONEDRAG_SHA256["nq"]
 
-    # E5 -- end-to-end attack-success positioning (GPU generation model).
+    # Exp. 3 -- end-to-end attack-success positioning (GPU generation model).
     if not args.skip_asr:
         from ragtrap.asr import run_asr
         from ragtrap.llm_judge import LocalLLMJudge
 
         fb = load_ragorigin_feedback(args.feedback, expected_sha256=RAGORIGIN_FEEDBACK_SHA256)
         judge = LocalLLMJudge(args.judge_model)
-        out["E5"] = run_asr(fb, judge, top_k=args.asr_top_k)
+        out["exp3"] = run_asr(fb, judge, top_k=args.asr_top_k)
 
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(out, indent=2), encoding="utf-8")
     print(f"wrote {args.out}")
-    print(json.dumps({k: (v if k in ("E0",) else "...") for k, v in out.items()}, indent=2)[:400])
+    print(json.dumps({k: (v if k in ("check",) else "...") for k, v in out.items()}, indent=2)[:400])
     return 0
 
 

@@ -32,8 +32,8 @@
     "n_suspects": 1000,
     "precision_drift_0.0": 1.0
   },
-  "E0": {
-    "experiment": "E0",
+  "check": {
+    "experiment": "check",
     "data": "synthetic (labelled)",
     "n_chunks": 200,
     "all_records_verify": true,
@@ -45,7 +45,7 @@
     "no_collateral_purge": true,
     "instrument_valid": true
   },
-  "E2_traceback_and_drift": {
+  "exp1_traceback_and_drift": {
     "drift_0": {
       "method": "ragtrap",
       "n_questions": 100,
@@ -221,8 +221,8 @@
       "repeats": 20
     }
   },
-  "E3_granularity": {
-    "experiment": "E3_granularity",
+  "exp2_granularity": {
+    "experiment": "exp2_granularity",
     "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
     "n_documents": 206,
     "poison_per_doc": 3,
@@ -259,8 +259,8 @@
     "poison_pool_sha256_pinned": "44df711454a9bada08e72e9e4a003a2cc845c43707ac93a3493e5168ec415cf2",
     "beir_sample_sha256_pinned": "b31332809dbc08cea7bb90e82a325e01928b85ae507682cce42b0f44d75a7c41"
   },
-  "E3_poison_per_doc_sweep": {
-    "experiment": "E3_poison_per_doc_sweep",
+  "exp2_poison_per_doc_sweep": {
+    "experiment": "exp2_poison_per_doc_sweep",
     "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
     "poison_per_doc_values": [
       1,

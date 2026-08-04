@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# RAGtrap MAIN claim (E3, with E2): one command that reproduces the paper's headline numbers.
+# RAGtrap MAIN claim (Exp. 2, with Exp. 1): one command that reproduces the paper's headline numbers.
 #
 # Default (fast, model-free, CPU-only, deterministic, ~10 s + a one-time ~6 MB fetch):
-#   * E3 false-purge, per-document vs per-chunk : 0.52 vs 0.00  (the lead result, contribution C1)
-#   * E2 traceback latency + work units, 0 model calls
-#   * E2-drift recall at p = 0.0 / 0.3 / 0.5    : 0.99 / 0.69 / 0.50
+#   * Exp. 2 false-purge, per-document vs per-chunk : 0.52 vs 0.00  (the lead result, contribution C1)
+#   * Exp. 1 traceback latency + work units, 0 model calls
+#   * Exp. 1 drift recall at p = 0.0 / 0.3 / 0.5    : 0.99 / 0.69 / 0.50
 # Writes results/main_results.json (.headline maps one-to-one to the paper).
 #
 #   ./scripts/experiment_main.sh
 #
 # Full (slow, ~60-90 min, needs a CUDA GPU + a one-time model download + the 764 MB corpus):
-# adds the model-served RAGForensics LLM-judge and RAGOrigin proxy baselines (E2), the full
-# 2,681,468-passage scaling sweep (E3 removal latency + signing cost), and E4 attack context.
+# adds the model-served RAGForensics LLM-judge and RAGOrigin proxy baselines (Exp. 1), the full
+# 2,681,468-passage scaling sweep (Exp. 2 removal latency + signing cost), and Exp. 3 attack context.
 # Refreshes results/results.json and results/macros.tex.
 #
-#   ./scripts/experiment_main.sh --full          # every paper number (E1-E4)
+#   ./scripts/experiment_main.sh --full          # every paper number (check + Exp. 1-3)
 #   ./scripts/experiment_main.sh --full --quick  # ~10-15 min: baselines on a ~15-question subset
 #
 # A reviewer who does not want to run --full can instead inspect the pre-computed, real outputs

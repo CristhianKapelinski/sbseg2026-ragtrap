@@ -6,9 +6,9 @@ This is the engine behind ``reproduce.sh``. It has two modes:
 * **fast (default)** -- model-free, CPU-only, deterministic. Reproduces the paper's three
   headline numbers in a few minutes with no model download and no GPU:
 
-    - false-purge rate, per-document vs per-chunk (E3): ``0.52`` vs ``0.00``;
-    - indexed per-suspect lookup latency and the work-unit gap vs a per-suspect baseline (E2);
-    - recall under post-ingestion drift (E2 drift split): ``0.99 / 0.69 / 0.50`` at
+    - false-purge rate, per-document vs per-chunk (Exp. 2): ``0.52`` vs ``0.00``;
+    - indexed per-suspect lookup latency and the work-unit gap vs a per-suspect baseline (Exp. 1);
+    - recall under post-ingestion drift (Exp. 1 drift split): ``0.99 / 0.69 / 0.50`` at
       drift ``0.0 / 0.3 / 0.5``.
 
   Inputs: the small third-party RAGOrigin attack-feedback JSON and the PoisonedRAG ``nq.json``
@@ -17,8 +17,8 @@ This is the engine behind ``reproduce.sh``. It has two modes:
 
 * **full (``--full`` / ``REPRODUCE_FULL=1``)** -- adds the slow, model-served comparisons: the
   published RAGForensics LLM-judge baseline and the RAGOrigin proxy-loss baseline on the
-  identical suspects, the end-to-end attack-success context (E5), and the full 2,681,468-passage
-  corpus scaling sweep (E3 removal latency + ingestion overhead). Requires a model download and
+  identical suspects, the end-to-end attack-success context (Exp. 3), and the full 2,681,468-passage
+  corpus scaling sweep (Exp. 2 removal latency + ingestion overhead). Requires a model download and
   the full corpus download; runs on a single GPU.
 
   ``--quick`` (in ``--full`` mode) runs the LLM-judge baseline over a small question subset so the
@@ -58,7 +58,7 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
     import hashlib
 
     from ragtrap.config import load_config
-    from ragtrap.experiments import run_e0
+    from ragtrap.experiments import run_check
     from ragtrap.realdata import (
         BEIR_NQ_SAMPLE_SHA256,
         POISONEDRAG_SHA256,
@@ -67,12 +67,12 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
         load_poisonedrag,
         load_ragorigin_feedback,
     )
-    from ragtrap.realeval import run_e1_ragtrap
-    from ragtrap.realeval3 import run_e3_granularity, sweep_e3_poison_per_doc
+    from ragtrap.realeval import run_exp1_ragtrap
+    from ragtrap.realeval3 import run_exp2_granularity, sweep_exp2_poison_per_doc
 
-    # E0 -- instrument correctness (verify, tamper-detect, attribute, revoke); pure crypto.
-    _section("E0 instrument validation (verify / tamper / attribute / revoke)")
-    e0 = run_e0(load_config())
+    # Instrument check -- correctness (verify, tamper-detect, attribute, revoke); pure crypto.
+    _section("Instrument check validation (verify / tamper / attribute / revoke)")
+    e0 = run_check(load_config())
     print(f"   instrument_valid={e0['instrument_valid']} "
           f"tamper_detected={e0['tamper_detected']} traceback_recall={e0['traceback_recall']}",
           flush=True)
@@ -86,11 +86,11 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
 
     fb = load_ragorigin_feedback(feedback, expected_sha256=RAGORIGIN_FEEDBACK_SHA256)
 
-    # E2 -- indexed lookup per suspect + recall under post-ingestion drift (model-free).
-    _section("E2 traceback latency + drift split (RAGtrap indexed lookup, no model)")
+    # Exp. 1 -- indexed lookup per suspect + recall under post-ingestion drift (model-free).
+    _section("Exp. 1 traceback latency + drift split (RAGtrap indexed lookup, no model)")
     rt: dict[str, dict] = {}
     for d in (0.0, 0.3, 0.5):
-        rt[f"drift_{d:g}"] = run_e1_ragtrap(fb, top_k=top_k, drift_fraction=d, repeats=20)
+        rt[f"drift_{d:g}"] = run_exp1_ragtrap(fb, top_k=top_k, drift_fraction=d, repeats=20)
     d0 = rt["drift_0"]
     print(f"   recall drift 0.0/0.3/0.5 = "
           f"{_fmt2(d0['detection']['recall']['point'])} / "
@@ -99,11 +99,11 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
     print(f"   per-suspect latency = {d0['latency_s_per_suspect_us']:.1f} us "
           f"(work units = {d0['work_units']}, model calls = 0)", flush=True)
 
-    # E3 -- per-chunk vs per-document false-purge on real partially-poisoned documents.
-    _section("E3 false-purge: per-document vs per-chunk (real BEIR sample + PoisonedRAG)")
+    # Exp. 2 -- per-chunk vs per-document false-purge on real partially-poisoned documents.
+    _section("Exp. 2 false-purge: per-document vs per-chunk (real BEIR sample + PoisonedRAG)")
     prag = load_poisonedrag(poisonedrag, dataset="nq")
     poison_pool = [t for e in prag for t in e.adv_texts]
-    e3 = run_e3_granularity(sample_parquet, poison_pool, n_documents=e3_docs, poison_per_doc=3)
+    e3 = run_exp2_granularity(sample_parquet, poison_pool, n_documents=e3_docs, poison_per_doc=3)
     e3["poison_pool_sha256_pinned"] = POISONEDRAG_SHA256["nq"]
     e3["beir_sample_sha256_pinned"] = BEIR_NQ_SAMPLE_SHA256
     pd = e3["per_document"]["false_purge_rate"]["point"]
@@ -111,8 +111,8 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
     print(f"   false-purge per-document = {_fmt2(pd)}  per-chunk = {_fmt2(pc)}  "
           f"(over {e3['n_documents']} documents)", flush=True)
 
-    # E3 sensitivity sweep over the injected-passage budget (same real BEIR sample).
-    e3_sweep = sweep_e3_poison_per_doc(
+    # Exp. 2 sensitivity sweep over the injected-passage budget (same real BEIR sample).
+    e3_sweep = sweep_exp2_poison_per_doc(
         sample_parquet, poison_pool, n_documents=e3_docs, poison_per_doc_values=(1, 2, 3, 5)
     )
     e3_sweep["poison_pool_sha256_pinned"] = POISONEDRAG_SHA256["nq"]
@@ -155,10 +155,10 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
         },
         "top_k": top_k,
         "headline": headline,
-        "E0": e0,
-        "E2_traceback_and_drift": rt,
-        "E3_granularity": e3,
-        "E3_poison_per_doc_sweep": e3_sweep,
+        "check": e0,
+        "exp1_traceback_and_drift": rt,
+        "exp2_granularity": e3,
+        "exp2_poison_per_doc_sweep": e3_sweep,
     }
 
 
@@ -174,7 +174,7 @@ def run_full(args, fast_out: dict) -> None:
     judge = os.environ.get("RAGTRAP_JUDGE_MODEL", "Qwen/Qwen2.5-3B-Instruct")
     bq = str(args.quick_questions) if args.quick else "0"
 
-    _section("FULL E2 head-to-head (RAGtrap index vs RAGForensics LLM judge)")
+    _section("FULL Exp. 1 head-to-head (RAGtrap index vs RAGForensics LLM judge)")
     subprocess.run(
         [py, str(REPO_ROOT / "scripts" / "run_real_eval.py"),
          "--feedback", args.feedback, "--judge-model", judge,
@@ -184,7 +184,7 @@ def run_full(args, fast_out: dict) -> None:
         check=True, cwd=REPO_ROOT,
     )
 
-    _section("FULL E2 RAGOrigin responsibility baseline")
+    _section("FULL Exp. 1 RAGOrigin responsibility baseline")
     subprocess.run(
         [py, str(REPO_ROOT / "scripts" / "run_ragorigin_baseline.py"),
          "--feedback", args.feedback, "--proxy-model", judge,
@@ -193,7 +193,7 @@ def run_full(args, fast_out: dict) -> None:
         check=True, cwd=REPO_ROOT,
     )
 
-    _section("FULL E2/E4 scaling sweep to the full 2,681,468-passage corpus")
+    _section("FULL Exp. 1 scaling sweep to the full 2,681,468-passage corpus")
     subprocess.run(
         [py, str(REPO_ROOT / "scripts" / "run_scaling.py"),
          "--parquet", parquet, "--poisonedrag", args.poisonedrag,
@@ -202,10 +202,10 @@ def run_full(args, fast_out: dict) -> None:
         check=True, cwd=REPO_ROOT,
     )
 
-    _section("FULL E0/E3/E5 (granularity on full corpus + attack-success context)")
+    _section("FULL check/Exp. 2/Exp. 3 (granularity on full corpus + attack-success context)")
     e3_docs = str(args.quick_questions) if args.quick else str(args.e3_docs)
     subprocess.run(
-        [py, str(REPO_ROOT / "scripts" / "run_e0_e3_e5.py"),
+        [py, str(REPO_ROOT / "scripts" / "run_check_exp2_exp3.py"),
          "--parquet", parquet, "--poisonedrag", args.poisonedrag,
          "--feedback", args.feedback, "--judge-model", judge,
          "--e3-docs", e3_docs,

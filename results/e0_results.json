@@ -17,8 +17,8 @@
     "hf_revision": "main",
     "seed": 1337
   },
-  "E0": {
-    "experiment": "E0",
+  "check": {
+    "experiment": "check",
     "data": "synthetic (labelled)",
     "n_chunks": 200,
     "all_records_verify": true,

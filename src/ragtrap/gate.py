@@ -6,7 +6,7 @@ and writes the signed :class:`ProvenanceRecord` into the datastore. The gate nev
 on a detector verdict: detectors are best-effort and recorded as verdicts, so even an
 undetected poisoned chunk remains attributable and revocable.
 
-A per-document configuration is provided for the granularity contrast (E3): one signed record is
+A per-document configuration is provided for the granularity contrast (Exp. 2): one signed record is
 produced per parent document and trust propagates to that document's chunks.
 """
 
@@ -137,7 +137,7 @@ def ingest_per_document(
     datastore: ProvenanceDatastore | None = None,
     detectors: dict[str, Detector] | None = None,
 ) -> ProvenanceDatastore:
-    """Per-document contrast (E3): one signed record per parent document, trust propagated.
+    """Per-document contrast (Exp. 2): one signed record per parent document, trust propagated.
 
     The document hash is computed over the concatenation of its chunk texts; every chunk of the
     document inherits the same document-level content hash and signature. This reproduces the

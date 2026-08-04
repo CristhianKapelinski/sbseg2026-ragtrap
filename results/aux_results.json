@@ -1,6 +1,6 @@
 {
-  "E0": {
-    "experiment": "E0",
+  "check": {
+    "experiment": "check",
     "data": "synthetic (labelled)",
     "n_chunks": 200,
     "all_records_verify": true,
@@ -12,8 +12,8 @@
     "no_collateral_purge": true,
     "instrument_valid": true
   },
-  "E3": {
-    "experiment": "E3_granularity",
+  "exp2": {
+    "experiment": "exp2_granularity",
     "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
     "n_documents": 206,
     "poison_per_doc": 3,
@@ -50,8 +50,8 @@
     "poison_pool_sha256_pinned": "44df711454a9bada08e72e9e4a003a2cc845c43707ac93a3493e5168ec415cf2",
     "beir_sample_sha256_pinned": "b31332809dbc08cea7bb90e82a325e01928b85ae507682cce42b0f44d75a7c41"
   },
-  "E5": {
-    "experiment": "E5_asr",
+  "exp3": {
+    "experiment": "exp3_asr",
     "generation_model": "Qwen/Qwen2.5-3B-Instruct",
     "n_questions": 100,
     "top_k": 5,
@@ -71,8 +71,8 @@
     },
     "mean_gen_seconds": 0.33923848118283784
   },
-  "E3_sweep": {
-    "experiment": "E3_poison_per_doc_sweep",
+  "exp2_sweep": {
+    "experiment": "exp2_poison_per_doc_sweep",
     "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
     "poison_per_doc_values": [
       1,

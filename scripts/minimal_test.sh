@@ -2,7 +2,7 @@
 # Minimal end-to-end functional test for RAGtrap (no network, no GPU, ~15 s).
 #
 # Exercises the real pipeline end to end on a synthetic labelled corpus and runs the unit suite:
-#   1. ragtrap selftest -- E1 instrument validation: sign every chunk, reject a tampered message,
+#   1. ragtrap selftest -- instrument check: sign every chunk, reject a tampered message,
 #      attribute suspects by indexed lookup, and revoke exactly one principal's chunks with no
 #      collateral. Prints JSON and asserts "instrument_valid": true.
 #   2. ragtrap demo     -- a concrete ingest -> indexed traceback -> source-revocation run,
@@ -15,7 +15,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$HERE"
 
-echo "== [1/3] ragtrap selftest (E1 instrument validation) =="
+echo "== [1/3] ragtrap selftest (instrument check) =="
 uv run ragtrap selftest
 
 echo
