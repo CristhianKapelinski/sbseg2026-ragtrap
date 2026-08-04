@@ -87,7 +87,7 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
     fb = load_ragorigin_feedback(feedback, expected_sha256=RAGORIGIN_FEEDBACK_SHA256)
 
     # E2 -- indexed lookup per suspect + recall under post-ingestion drift (model-free).
-    _section("E2 traceback latency + drift split (RAGtrap O(1) lookup, no model)")
+    _section("E2 traceback latency + drift split (RAGtrap indexed lookup, no model)")
     rt: dict[str, dict] = {}
     for d in (0.0, 0.3, 0.5):
         rt[f"drift_{d:g}"] = run_e1_ragtrap(fb, top_k=top_k, drift_fraction=d, repeats=20)
@@ -174,7 +174,7 @@ def run_full(args, fast_out: dict) -> None:
     judge = os.environ.get("RAGTRAP_JUDGE_MODEL", "Qwen/Qwen2.5-3B-Instruct")
     bq = str(args.quick_questions) if args.quick else "0"
 
-    _section("FULL E1 head-to-head (RAGtrap O(1) vs RAGForensics LLM judge)")
+    _section("FULL E2 head-to-head (RAGtrap index vs RAGForensics LLM judge)")
     subprocess.run(
         [py, str(REPO_ROOT / "scripts" / "run_real_eval.py"),
          "--feedback", args.feedback, "--judge-model", judge,
