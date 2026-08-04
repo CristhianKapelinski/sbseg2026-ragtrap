@@ -1,8 +1,8 @@
-# RAGtrap: Surgical Source Revocation and Constant-Time Provenance Lookup for Poisoned RAG Corpora
+# RAGtrap: Source Revocation and Indexed Provenance Lookup for Poisoned RAG Corpora
 
-RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora**. RAG pipelines ground a language model on passages ingested from untrusted web and document sources with no trust check at admission, so corpus poisoning is cheap and effective; once a source is found compromised, the operator faces an unsolved problem: how to purge that source cleanly without rescanning the corpus or deleting benign content. RAGtrap records, for each ingested chunk, a cryptographically signed (real Ed25519) provenance record — source URI, principal, content hash, detector verdicts, timestamp — natively in the vector store. Revocation then removes **exactly** the compromised source's chunks at a false-purge rate of **0.00 vs 0.52** for document-level purging. For each suspect, traceback is **one expected-O(1) content-hash lookup with 0 model calls**; on identical inputs, the two forensic baselines instead infer origin from text and require 1000–2000 model calls (**16,274x** and **634x** the lookup latency). One-command revocation gives a **16,931x** mean-time-to-remediation advantage on the full 2,681,468-passage corpus.
+RAGtrap is a recovery layer for retrieval-augmented-generation (RAG) corpora. It records a signed provenance record for every ingested chunk and maintains indices by source and content hash. In the evaluated mixed documents, source revocation removes **0.00 benign-source content**, compared with a **0.52 false-purge rate** for document-level removal. Exact suspect chunks require one indexed lookup and no model request. The prototype uses an in-memory datastore, so its latency results measure the index algorithms rather than end-to-end vector-database remediation.
 
-> **Paper:** *RAGtrap: Surgical Source Revocation and Constant-Time Provenance Lookup for Poisoned RAG Corpora* (SBSeg 2026).
+> **Paper:** *RAGtrap: Source Revocation and Indexed Provenance Lookup for Poisoned RAG Corpora* (SBSeg 2026).
 
 > **SBSeg 2026 artifact evaluation.** Review instructions: [submission](https://doc-artefatos.github.io/sbseg2026/subinstrucoes.html) / [review](https://doc-artefatos.github.io/sbseg2026/revinstrucoes.html).
 
@@ -28,9 +28,9 @@ RAGtrap is an **ingestion gate for retrieval-augmented-generation (RAG) corpora*
 The seals considered are: **Available (SeloD)**, **Functional (SeloF)**, **Sustainable (SeloS)**, and **Reproducible (SeloR)**.
 
 - **Available (SeloD):** self-contained public repository under the MIT license, with a pinned dependency set ([`pyproject.toml`](pyproject.toml) + [`uv.lock`](uv.lock)). Every input is public and third-party, fetched and checksum-pinned at run time; the clean BEIR substrate for the fast path ships frozen in [`data/`](data/).
-- **Functional (SeloF):** one command — [`scripts/minimal_test.sh`](scripts/minimal_test.sh) — runs the real signing → O(1) traceback → revoke-source pipeline end to end and the 30-test unit suite (no network, no GPU), asserting `instrument_valid: true`.
-- **Sustainable (SeloS):** `src/` layout, one module per concern (23 modules under [`src/ragtrap/`](src/ragtrap/): `gate`, `signing`, `datastore`, `traceback`, `revocation`, `realeval`, `scaling`, …), type hints, docstrings, 30 unit tests, ruff-clean; all behaviour is environment-driven (`RAGTRAP_*`), nothing is hardcoded.
-- **Reproducible (SeloR):** the default experiment is **deterministic** (fixed seeds) and **model-free**; every third-party input is pinned by SHA-256 ([`src/ragtrap/realdata.py`](src/ragtrap/realdata.py)) and the frozen BEIR sample ships in `data/`, so a reviewer reaches the exact headline numbers (false-purge 0.00/0.52, drift 1.00/0.70/0.51) with one command and zero manual work.
+- **Functional (SeloF):** one command — [`scripts/minimal_test.sh`](scripts/minimal_test.sh) — runs signing → indexed traceback → source revocation end to end and the 33-test unit suite (no network, no GPU), asserting `instrument_valid: true`.
+- **Sustainable (SeloS):** `src/` layout, one module per concern (23 modules under [`src/ragtrap/`](src/ragtrap/): `gate`, `signing`, `datastore`, `traceback`, `revocation`, `realeval`, `scaling`, …), type hints, docstrings, 33 unit tests, and a clean ruff check.
+- **Reproducible (SeloR):** the default experiment is **deterministic** (fixed seeds) and **model-free**. Small inputs are pinned by SHA-256, the frozen BEIR sample ships in `data/`, and the full BEIR snapshot is pinned to an immutable revision.
 
 ---
 
@@ -95,19 +95,19 @@ uv sync
 
 ## Minimal Test
 
-One command (~1 s, no network, no GPU). It exercises the real pipeline end to end — sign every chunk, reject a tampered message, attribute suspects by O(1) lookup, revoke exactly one principal's chunks with no collateral — plus a concrete ingest→traceback→revoke demo and the unit suite:
+One command (~1 s, no network, no GPU). It exercises the real pipeline end to end: sign every chunk, reject a tampered message, attribute suspects by indexed lookup, and revoke one source with no collateral. It also runs a concrete demo and the unit suite:
 
 ```bash
 ./scripts/minimal_test.sh
 ```
 
-**Expected output:** the selftest prints JSON ending in `"instrument_valid": true`; the demo prints `ingested chunks: 100`, `traceback attributed 10 suspects via one O(1) lookup each`, and `revoke-source attacker-0: purged 10 chunks (100 -> 90)`; the suite's progress bar reaches `[100%]`; the final line is `MINIMAL TEST: PASSED`. **Measured on the reference machine: ~1 s.**
+**Expected output:** the selftest prints JSON ending in `"instrument_valid": true`; the demo prints `ingested chunks: 100`, `traceback attributed 10 suspects via one indexed lookup each`, and `revoke-source attacker-0: purged 10 chunks (100 -> 90)`; the suite's progress bar reaches `[100%]`; the final line is `MINIMAL TEST: PASSED`. **Measured on the reference machine: ~1 s.**
 
 ---
 
 ## Experiments
 
-The paper has four experiments; instrument validation (E1) is covered by the [Minimal Test](#minimal-test). The **main claim is \#2** (surgical revocation: per-chunk vs document-level false purge), reproduced together with Claim \#1 by the fast, model-free [`scripts/experiment_main.sh`](scripts/experiment_main.sh) into `results/main_results.json`.
+The paper has four experiments; instrument validation (E1) is covered by the [Minimal Test](#minimal-test). The **main claim is \#2** (source-indexed revocation versus document-level false purge), reproduced together with Claim \#1 by the fast, model-free [`scripts/experiment_main.sh`](scripts/experiment_main.sh) into `results/main_results.json`.
 
 Each claim below is **one command** and defaults to a **fast variant**. The slow, GPU + model-served full run is gated behind `--full`; a reviewer who does not run it may instead inspect the pre-computed, real outputs already committed under [`results/`](results/) (`results.json`, `*_results.json`, `macros.tex`).
 
@@ -119,25 +119,25 @@ Each claim below is **one command** and defaults to a **fast variant**. The slow
 
 ## Claim \#1 — Forensic-time attribution and drift sensitivity
 
-- **Description:** on the real PoisonedRAG attack over Natural Questions, RAGtrap resolves each of 1000 suspects (500 poison / 500 clean) with one content-hash lookup and **0 model calls**. The two model-served forensic baselines receive the same suspects but infer origin from text, so this experiment compares architectural cost rather than equivalent detectors. Exact hash lookup loses matches under post-ingestion drift while resolved matches remain precise.
+- **Description:** on the real PoisonedRAG attack over Natural Questions, RAGtrap performs one content-hash lookup for each of 1000 suspects and makes **0 model calls**. It returns a source only when all records with those bytes agree on one source. The two model-served forensic baselines infer origin from text, so this experiment compares architectural cost rather than equivalent detectors.
 - **Execution (fast, from the main experiment above):**
   ```bash
   uv run python -c "import json;h=json.load(open('results/main_results.json'))['headline'];print({k:h[k] for k in ('drift_recall_0.0','drift_recall_0.3','drift_recall_0.5','ragtrap_per_suspect_us','ragtrap_work_units','ragtrap_model_calls')})"
   ```
 - **Expected time:** instant (reads the fast main result). **Expected resources:** CPU only.
-- **Expected result:** drift recall **1.00 / 0.70 / 0.51** at p = 0.0 / 0.3 / 0.5; per-suspect latency ~80–110 µs; 1000 work units; **0 model calls**.
-- **Full variant (`--full`, GPU + model, ~30–60 min):** `./scripts/experiment_main.sh --full` runs the published RAGForensics LLM-judge and RAGOrigin proxy baselines on the identical suspects. Measured (stored in `results/real_results.json`): judge recall **0.96** at **1.65 s/suspect** (1000 model calls); RAGOrigin recall **1.00** at 64.5 ms/suspect (2000 calls); RAGtrap **101.7 µs/suspect**, 0 calls → **16,274x** faster than the judge, **634x** faster than the proxy.
+- **Expected result:** recall **0.99 / 0.69 / 0.50** at p = 0.0 / 0.3 / 0.5; per-suspect latency depends on the host; 1000 work units; **0 model calls**. Five poisoned suspects are ambiguous because identical bytes occur under different source identities.
+- **Full variant (`--full`, GPU + model, ~30–60 min):** `./scripts/experiment_main.sh --full` runs the published RAGForensics LLM-judge and RAGOrigin proxy baselines on the identical suspects. In the stored reference run, the judge takes **1.65 s/suspect** (1000 model calls), RAGOrigin takes 64.5 ms/suspect (2000 calls), and RAGtrap takes **78.7 µs/suspect** (0 calls): **21,026x** and **819x** the lookup latency.
 
-## Claim \#2 — Surgical revocation, then MTTR at corpus scale **(main claim)**
+## Claim \#2 — Source revocation and in-memory removal latency **(main claim)**
 
-- **Description:** for real NQ passages each injected with PoisonedRAG passages under one principal, document-level purging over-purges clean fragments while RAGtrap's per-chunk scheme removes exactly the poisoned chunks; the one-command revocation MTTR advantage grows with corpus size up to the full 2,681,468-passage corpus.
+- **Description:** each mixed document contains benign NQ chunks under a benign source identity and PoisonedRAG chunks under one compromised-source identity. Document-level purging removes both; RAGtrap calls the source index and removes only chunks recorded under the compromised source. Poison labels evaluate the result but do not select removals.
 - **Execution (fast, from the main experiment above):**
   ```bash
   uv run python -c "import json;h=json.load(open('results/main_results.json'))['headline'];print('per-document FP',h['false_purge_per_document'],'| per-chunk FP',h['false_purge_per_chunk'])"
   ```
 - **Expected time:** instant (reads the fast main result; the fast run that produced it is ~10 s). **Expected resources:** CPU only, < 1 GB RAM.
 - **Expected result:** false-purge **per-document 0.52** (95% Wilson CI [0.49, 0.55]) vs **per-chunk 0.00**.
-- **Full variant (`--full`, ~20–30 min, CPU):** the scaling sweep in `./scripts/experiment_main.sh --full`. Measured (stored in `results/scaling_results.json`): on the full 4,364,162-chunk corpus, `revoke-source` purges in **46.2 µs** vs a **782 ms** manual scan — a **16,931x** MTTR advantage that grows with corpus size (44x → 627x → 6977x → 16931x); real Ed25519 per-chunk signing is ~69–90 µs/chunk, ~1.9x the symmetric HMAC stand-in.
+- **Full variant (`--full`, ~20–30 min, CPU):** the scaling sweep in `./scripts/experiment_main.sh --full`. In the stored in-memory run, locating and deleting 100 chunks takes **46.2 µs** with the source index and **782 ms** with a full scan. These measurements exclude vector-database persistence, network access, and cache invalidation. Real Ed25519 signing takes ~69–90 µs/chunk, ~1.9x the symmetric HMAC reference.
 
 ## Claim \#3 — Attack-success context (the suspects are genuinely harmful)
 
@@ -149,7 +149,7 @@ Each claim below is **one command** and defaults to a **fast variant**. The slow
 - **Expected time:** part of the ~60–90 min full run. **Expected resources:** 1 CUDA GPU (local generation model).
 - **Expected result:** attack-success rate **98%** (95% Wilson CI [0.93, 0.99]) over 100 questions, with a 0% correct-answer rate. Measured value stored in `results/aux_results.json`.
 
-Exact numbers (with 95% Wilson CIs and N) for the full run are in [`results/results.json`](results/results.json) and surfaced in [`results/macros.tex`](results/macros.tex); per-experiment captured outputs and interpretation are in [`DOCUMENTATION.md`](DOCUMENTATION.md).
+Exact numbers (with 95% Wilson CIs and N) for the full run are in [`results/results.json`](results/results.json) and surfaced in [`results/macros.tex`](results/macros.tex). [`scripts/verify_paper_values.py`](scripts/verify_paper_values.py) compares every generated macro with the camera-ready values frozen in [`expected/paper_macros.tex`](expected/paper_macros.tex). Per-experiment outputs and interpretation are in [`DOCUMENTATION.md`](DOCUMENTATION.md).
 
 ---
 

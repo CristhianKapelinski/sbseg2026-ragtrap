@@ -6,8 +6,7 @@ bounded prefix of it plus the real PoisonedRAG adversarial passages through the 
 measures, at several corpus sizes, the two structural quantities the paper claims:
 
 * ingestion overhead (per-chunk Ed25519 signing latency, throughput, record size); and
-* mean-time-to-remediation (MTTR) of one-command ``revoke-source`` versus a full-corpus manual
-  scan, whose advantage grows with corpus size.
+* in-memory latency of indexed ``revoke-source`` versus a full-corpus scan.
 
 Reading the parquet directly (rather than streaming the dataset) keeps the prefix deterministic
 and the digest reproducible. The passage prefix is pinned by the SHA-256 of its concatenated
@@ -98,11 +97,11 @@ def run_scale_point(
     revoke_principal: str | None = None,
     repeats: int = 5,
 ) -> ScalePoint:
-    """Ingest a prefix of the real corpus + the real poison, then time revocation vs manual scan.
+    """Ingest a corpus prefix and poison, then time indexed removal versus a scan.
 
-    Returns measured ingestion overhead and MTTR. The corpus is rebuilt for each timed run so the
-    revoke and manual baselines start from identical stores; the structural O(revoked) vs
-    O(corpus) gap is what the scaling sweep exposes.
+    Returns ingestion overhead and in-memory latency. The corpus is rebuilt for each timed run,
+    so the revoke and manual baselines start from identical stores. The structural O(revoked)
+    versus O(corpus) gap is what the scaling sweep exposes.
     """
     from .gate import chunk_text
 
@@ -143,7 +142,7 @@ def run_scale_point(
     sign_seconds = time.perf_counter() - start
     n_chunks = len(corpus)
 
-    # MTTR: one-command revoke (O(revoked)) vs manual full-corpus scan (O(corpus)).
+    # Indexed removal (O(revoked)) vs an in-memory full-corpus scan (O(corpus)).
     # The compromised principal's chunks are saved so each timed purge can be undone in place,
     # avoiding a full-store deep copy per repeat (which would dominate RAM at 2.68M passages).
     target_ids = sorted(store.chunks_of_principal(target))

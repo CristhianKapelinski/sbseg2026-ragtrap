@@ -1,6 +1,6 @@
 """Provenance record schema and its canonical signed-message encoding.
 
-A :class:`ProvenanceRecord` is the per-chunk artifact RAGtrap seals into the vector store. It
+A :class:`ProvenanceRecord` is the per-chunk artifact RAGtrap seals beside corpus content. It
 carries the chunk's own content hash and the detector verdicts that admitted it, in contrast to
 document-level schemes that hash a whole document and propagate trust to fragments.
 
@@ -32,7 +32,7 @@ class Chunk:
 
 @dataclass(frozen=True)
 class ProvenanceRecord:
-    """A signed per-chunk provenance record stored alongside the chunk in the vector store."""
+    """A signed per-chunk provenance record stored alongside its chunk."""
 
     chunk_id: str
     source_uri: str

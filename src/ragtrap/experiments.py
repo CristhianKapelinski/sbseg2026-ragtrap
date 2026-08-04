@@ -90,9 +90,8 @@ def run_e0(cfg: Config) -> dict[str, object]:
 def run_all_runnable(cfg: Config) -> dict[str, object]:
     """Report E0 plus the resolved configuration and environment.
 
-    The real, non-circular experiments (E1 traceback head-to-head, E2 MTTR scaling, E3
-    granularity, E4 overhead, E5 attack-success) are run by the dedicated scripts on the pinned
-    third-party datasets; this function provides the instrument-validation correctness property.
+    The paper's real-data experiments (E2 attribution, E3 revocation, and E4 attack context) are
+    run by dedicated scripts; this function provides the E1 instrument-validation property.
     """
     out: dict[str, object] = {"environment": _env_block(), "config": cfg.as_dict()}
     out["E0"] = run_e0(cfg)

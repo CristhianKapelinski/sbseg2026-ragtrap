@@ -5,15 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ragtrap"
 version = "0.1.0"
-description = "Per-chunk signed provenance with O(1) traceback and source revocation for RAG ingestion pipelines"
+description = "Per-chunk signed provenance with indexed traceback and source revocation for RAG"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-keywords = ["rag", "provenance", "ed25519", "supply-chain", "poisoning", "traceback"]
+keywords = ["rag", "provenance", "ed25519", "poisoning", "traceback", "source-revocation"]
 authors = [{ name = "RAGtrap authors" }]
 
 # Pinned, bounded dependency ranges. The fast/minimal path (signing, datastore,
-# traceback, revocation, the deterministic constant-time experiments, and loading
+# traceback, revocation, the deterministic indexed-lookup experiments, and loading
 # the shipped sample + the small third-party attack files) needs only `cryptography`
 # plus the lightweight `datasets`/`pyarrow` loaders, so these are the default
 # dependencies installed by a plain `uv sync`. The heavy `eval` extra (dense
@@ -23,6 +23,7 @@ dependencies = [
     "cryptography>=42.0",
     "datasets>=2.18",
     "huggingface-hub>=0.23",
+    "matplotlib>=3.8",
     "pyarrow>=15.0",
 ]
 

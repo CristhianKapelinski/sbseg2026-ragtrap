@@ -1,7 +1,7 @@
 """Run the real, non-circular E1 evaluation and write results/real_results.json.
 
 E1 compares, on the *identical* third-party suspect set (RAGOrigin released e5-retrieval feedback
-over PoisonedRAG's NQ attack), RAGtrap's constant-time signature lookup against the published
+over PoisonedRAG's NQ attack), RAGtrap's indexed content-hash lookup against the published
 RAGForensics LLM-judge baseline (run on a local model, so there is no API billing). Detection
 metrics carry 95% Wilson CIs; latency carries a bootstrap CI; the cost signal is the model-call
 count and wall-clock, never a dollar figure. A paraphrase-drift split exposes RAGtrap's honest

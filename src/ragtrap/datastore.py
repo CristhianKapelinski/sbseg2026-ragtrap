@@ -1,12 +1,12 @@
-"""Provenance datastore: the signed-record index embedded in the vector store.
+"""In-memory provenance datastore used by the prototype and experiments.
 
-This module models the index a real vector store would carry alongside its embeddings. It is
-deliberately a plain in-memory/JSON-backed structure so the experiments measure the *algorithmic*
-cost of traceback and revocation, not the overhead of a particular vector database. The two
-side indices are what make traceback constant-time:
+This module models the index a deployment would persist beside its embeddings. It is deliberately
+an in-memory structure, so latency results measure the index algorithms and exclude database,
+network, transaction, and cache-invalidation costs. The two
+side indices avoid a corpus scan during traceback:
 
-* ``by_content_hash``: chunk content hash -> chunk_id, so a suspect chunk's text resolves to its
-  signed record in O(1).
+* ``by_content_hash``: chunk content hash -> chunk-id set, so a unique suspect chunk resolves to
+  its signed record in O(1) without overwriting duplicate content.
 * ``by_principal``: principal -> set of chunk_ids, so revoking a compromised source enumerates
   exactly its chunks in O(k) for k revoked chunks, without scanning the corpus.
 
@@ -31,15 +31,17 @@ class ProvenanceDatastore:
 
     records: dict[str, ProvenanceRecord] = field(default_factory=dict)
     chunks: dict[str, Chunk] = field(default_factory=dict)
-    by_content_hash: dict[str, str] = field(default_factory=dict)
+    by_content_hash: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     by_principal: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     revoked_principals: set[str] = field(default_factory=set)
 
     def put(self, chunk: Chunk, record: ProvenanceRecord) -> None:
         """Insert a chunk and its signed provenance record, updating the side indices."""
+        if record.principal in self.revoked_principals:
+            raise ValueError(f"source {record.principal!r} is revoked")
         self.records[chunk.chunk_id] = record
         self.chunks[chunk.chunk_id] = chunk
-        self.by_content_hash[record.content_hash] = chunk.chunk_id
+        self.by_content_hash[record.content_hash].add(chunk.chunk_id)
         self.by_principal[record.principal].add(chunk.chunk_id)
 
     def __len__(self) -> int:
@@ -49,9 +51,12 @@ class ProvenanceDatastore:
         return self.records.get(chunk_id)
 
     def lookup_by_content_hash(self, content_hash: str) -> ProvenanceRecord | None:
-        """O(1) resolution of a chunk's signed record from its content hash."""
-        chunk_id = self.by_content_hash.get(content_hash)
-        return self.records.get(chunk_id) if chunk_id is not None else None
+        """Resolve a hash when all matching records agree on one source."""
+        chunk_ids = self.by_content_hash.get(content_hash, set())
+        records = [self.records[chunk_id] for chunk_id in chunk_ids if chunk_id in self.records]
+        if not records or len({record.principal for record in records}) != 1:
+            return None
+        return records[0]
 
     def chunks_of_principal(self, principal: str) -> set[str]:
         """O(1) access to the set of chunk ids attributed to a principal."""
@@ -63,8 +68,10 @@ class ProvenanceDatastore:
         if record is None:
             return False
         self.chunks.pop(chunk_id, None)
-        if self.by_content_hash.get(record.content_hash) == chunk_id:
-            del self.by_content_hash[record.content_hash]
+        hash_ids = self.by_content_hash.get(record.content_hash, set())
+        hash_ids.discard(chunk_id)
+        if not hash_ids:
+            self.by_content_hash.pop(record.content_hash, None)
         self.by_principal.get(record.principal, set()).discard(chunk_id)
         return True
 

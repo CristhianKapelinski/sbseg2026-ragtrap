@@ -66,6 +66,30 @@ def test_ragtrap_traceback_attributes_suspects() -> None:
     assert result.work_units == len(suspects)
 
 
+def test_identical_content_from_multiple_sources_is_ambiguous() -> None:
+    signer = Ed25519Signer.generate()
+    chunks = [
+        Chunk("a", "identical text", "u://a", "source-a"),
+        Chunk("b", "identical text", "u://b", "source-b"),
+    ]
+    store, _ = ingest(chunks, signer)
+    suspect = Chunk("suspect", "identical text", "u://unknown", "unknown")
+    result = ragtrap_traceback([suspect], store, signer)
+    assert result.attributions == {"suspect": None}
+
+
+def test_identical_content_from_one_source_remains_attributable() -> None:
+    signer = Ed25519Signer.generate()
+    chunks = [
+        Chunk("a", "identical text", "u://a", "source-a"),
+        Chunk("b", "identical text", "u://a", "source-a"),
+    ]
+    store, _ = ingest(chunks, signer)
+    suspect = Chunk("suspect", "identical text", "u://unknown", "unknown")
+    result = ragtrap_traceback([suspect], store, signer)
+    assert result.attributions == {"suspect": "source-a"}
+
+
 def test_ragtrap_traceback_detects_tamper() -> None:
     corpus = _corpus()
     signer = Ed25519Signer.generate()

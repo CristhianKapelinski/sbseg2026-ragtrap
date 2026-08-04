@@ -1,14 +1,13 @@
-"""Source revocation: one-command batch purge vs a manual per-chunk loop.
+"""Source-indexed removal versus an in-memory full-corpus scan.
 
 When a principal (source) is found to be compromised, RAGtrap revokes it in one operation:
 ``revoke_source`` reads the principal's chunk-id set from the side index (O(1) to enumerate) and
 purges exactly those chunks, marking the principal revoked so future ingestion from it is
 refused. This is the recovery/remediation layer that the surveyed prior work does not build.
 
-The manual baseline (``manual_purge``) models the alternative an operator without a provenance
-index faces: scan the whole corpus and remove the chunks whose principal matches. It is measured
-to quantify the mean-time-to-remediation (MTTR) advantage; both operate on the same datastore so
-the comparison is apples-to-apples.
+The manual baseline (``manual_purge``) scans the in-memory corpus and removes chunks whose
+principal matches. The comparison isolates indexed enumeration from scanning; it does not measure
+end-to-end remediation in a persistent vector database.
 """
 
 from __future__ import annotations
@@ -43,6 +42,20 @@ def revoke_source(datastore: ProvenanceDatastore, principal: str) -> RevocationR
     datastore.revoked_principals.add(principal)
     return RevocationResult(
         principal=principal, purged_chunk_ids=target_ids, scanned_chunks=len(target_ids)
+    )
+
+
+def purge_document(datastore: ProvenanceDatastore, document_id: str) -> RevocationResult:
+    """Remove every chunk in one document, regardless of its recorded source."""
+    target_ids = sorted(
+        chunk_id
+        for chunk_id, chunk in datastore.chunks.items()
+        if chunk.document_id == document_id
+    )
+    for chunk_id in target_ids:
+        datastore.remove_chunk(chunk_id)
+    return RevocationResult(
+        principal=document_id, purged_chunk_ids=target_ids, scanned_chunks=len(target_ids)
     )
 
 

@@ -1,7 +1,7 @@
-"""Run the full-scale ingestion-overhead and MTTR sweep on the real BEIR NQ corpus.
+"""Run the full-scale ingestion-overhead and in-memory removal sweep on BEIR NQ.
 
 Writes results/scaling_results.json: at each corpus size, the per-chunk Ed25519 signing latency
-and throughput, and the MTTR of one-command revoke-source versus a full-corpus manual scan, with
+and throughput, and indexed removal latency versus a full-corpus in-memory scan, with
 the ratio. The sweep shows the revoke advantage grows with corpus size, measured up to the full
 2,681,468-passage corpus.
 """

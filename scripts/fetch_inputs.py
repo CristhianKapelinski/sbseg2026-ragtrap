@@ -40,6 +40,7 @@ RAGORIGIN_REPO = "https://github.com/zhangbl6618/RAG-Responsibility-Attribution.
 POISONEDRAG_REPO = "https://github.com/sleeepeer/PoisonedRAG.git"
 RAGORIGIN_FEEDBACK_REL = "attack_feedback/PRAGB/k5_m5_e5_gpt-4o-mini.json"
 POISONEDRAG_NQ_REL = "results/adv_targeted_results/nq.json"
+BEIR_NQ_REVISION = "b7253e6c379163d024ddb1d6948152a91a2e3b46"
 
 
 def _sha256(path: Path) -> str:
@@ -110,7 +111,10 @@ def main() -> int:
         from huggingface_hub import snapshot_download
 
         snap = snapshot_download(
-            "BeIR/nq", repo_type="dataset", allow_patterns=["corpus/*", "README*"]
+            "BeIR/nq",
+            repo_type="dataset",
+            revision=BEIR_NQ_REVISION,
+            allow_patterns=["corpus/*", "README*"],
         )
         import glob
         hits = glob.glob(os.path.join(snap, "**", "corpus-*.parquet"), recursive=True)

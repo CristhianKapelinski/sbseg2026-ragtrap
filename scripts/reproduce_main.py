@@ -7,8 +7,8 @@ This is the engine behind ``reproduce.sh``. It has two modes:
   headline numbers in a few minutes with no model download and no GPU:
 
     - false-purge rate, per-document vs per-chunk (E3): ``0.52`` vs ``0.00``;
-    - constant-time per-suspect lookup latency and the work-unit gap vs a per-suspect baseline (E2);
-    - recall under post-ingestion drift (E2 drift split): ``1.00 / 0.70 / 0.51`` at
+    - indexed per-suspect lookup latency and the work-unit gap vs a per-suspect baseline (E2);
+    - recall under post-ingestion drift (E2 drift split): ``0.99 / 0.69 / 0.50`` at
       drift ``0.0 / 0.3 / 0.5``.
 
   Inputs: the small third-party RAGOrigin attack-feedback JSON and the PoisonedRAG ``nq.json``
@@ -18,7 +18,7 @@ This is the engine behind ``reproduce.sh``. It has two modes:
 * **full (``--full`` / ``REPRODUCE_FULL=1``)** -- adds the slow, model-served comparisons: the
   published RAGForensics LLM-judge baseline and the RAGOrigin proxy-loss baseline on the
   identical suspects, the end-to-end attack-success context (E5), and the full 2,681,468-passage
-  corpus scaling sweep (E2/E4 MTTR + ingestion overhead). Requires a one-time model download and
+  corpus scaling sweep (E3 removal latency + ingestion overhead). Requires a model download and
   the full corpus download; runs on a single GPU.
 
   ``--quick`` (in ``--full`` mode) runs the LLM-judge baseline over a small question subset so the
@@ -26,7 +26,7 @@ This is the engine behind ``reproduce.sh``. It has two modes:
 
 Every result flows into ``results/main_results.json``; its ``headline`` block maps one-to-one to
 the numbers in the paper. ``--full`` additionally writes the per-experiment files and refreshes
-``results/results.json`` and ``paper/macros.tex`` via ``scripts/aggregate_results.py``.
+``results/results.json`` and ``results/macros.tex`` via ``scripts/aggregate_results.py``.
 """
 
 from __future__ import annotations
@@ -86,7 +86,7 @@ def run_fast(feedback: str, poisonedrag: str, sample_parquet: str,
 
     fb = load_ragorigin_feedback(feedback, expected_sha256=RAGORIGIN_FEEDBACK_SHA256)
 
-    # E2 -- constant-time lookup per suspect + recall under post-ingestion drift (model-free).
+    # E2 -- indexed lookup per suspect + recall under post-ingestion drift (model-free).
     _section("E2 traceback latency + drift split (RAGtrap O(1) lookup, no model)")
     rt: dict[str, dict] = {}
     for d in (0.0, 0.3, 0.5):
@@ -184,6 +184,15 @@ def run_full(args, fast_out: dict) -> None:
         check=True, cwd=REPO_ROOT,
     )
 
+    _section("FULL E2 RAGOrigin responsibility baseline")
+    subprocess.run(
+        [py, str(REPO_ROOT / "scripts" / "run_ragorigin_baseline.py"),
+         "--feedback", args.feedback, "--proxy-model", judge,
+         "--top-k", str(args.top_k), "--max-questions", bq,
+         "--out", str(REPO_ROOT / "results" / "real_results.json")],
+        check=True, cwd=REPO_ROOT,
+    )
+
     _section("FULL E2/E4 scaling sweep to the full 2,681,468-passage corpus")
     subprocess.run(
         [py, str(REPO_ROOT / "scripts" / "run_scaling.py"),
@@ -204,8 +213,10 @@ def run_full(args, fast_out: dict) -> None:
         check=True, cwd=REPO_ROOT,
     )
 
-    _section("aggregate -> results/results.json + paper/macros.tex")
+    _section("aggregate -> results/results.json + results/macros.tex")
     subprocess.run([py, str(REPO_ROOT / "scripts" / "aggregate_results.py")],
+                   check=True, cwd=REPO_ROOT)
+    subprocess.run([py, str(REPO_ROOT / "scripts" / "make_figures.py")],
                    check=True, cwd=REPO_ROOT)
 
 
@@ -251,7 +262,7 @@ def main() -> int:
 
     if args.full:
         run_full(args, out)
-        print("\nFull run complete. See results/results.json and paper/macros.tex.", flush=True)
+        print("\nFull run complete. See results/results.json and results/macros.tex.", flush=True)
     return 0
 
 

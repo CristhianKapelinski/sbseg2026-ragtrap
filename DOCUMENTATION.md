@@ -2,8 +2,9 @@
 
 This document records the problem RAGtrap addresses, its narrowed contribution, its design, and,
 for each experiment, the exact command, the real captured output, and its interpretation. Every
-number here is produced by code executed on the pinned third-party datasets; none is estimated or
-fabricated. The attack, the dense retrieval, the ground-truth labels, and both baselines are
+number here is produced by code executed on the stated third-party datasets; none is estimated or
+fabricated. Small inputs are checksum-pinned, and the full BEIR snapshot uses an immutable
+revision. The attack, the dense retrieval, the ground-truth labels, and both baselines are
 third-party artifacts that RAGtrap did not author, so the suspect set used for attribution is
 independent of the mechanism under test.
 
@@ -23,15 +24,16 @@ procedure?
 
 ## 2. Narrowed contribution
 
-The supply-chain framing and the idea of an ingestion gate are not themselves novel; RAGtrap's
-contribution is the recovery layer that framing implies but that no surveyed tool builds. RAGtrap
+The idea of an ingestion gate is not itself novel. RAGtrap's contribution is the recovery layer
+that no surveyed tool builds. RAGtrap
 claims the conjunction of:
 
 1. **Per-chunk signed provenance** with the chunk's own content hash and admitting detector
-   verdicts, embedded in the vector store.
+   verdicts. The prototype stores these records in memory; vector-database integration is future
+   work.
 2. **Real Ed25519 public-key signatures**, so provenance is non-repudiable and verifiable by any
    holder of the public key.
-3. **Traceback as a single constant-time signature-keyed lookup**, the structural alternative to
+3. **Traceback as a single indexed content-hash lookup**, the structural alternative to
    re-retrieving and scoring suspects with a language model.
 4. **One-command source revocation** that batch-purges every chunk of a compromised principal.
 
@@ -50,17 +52,17 @@ RAGtrap is an ingestion gate: for each chunk it computes a SHA-256 content hash,
 best-effort detector suite, assembles a canonical byte string over the provenance tuple (chunk id,
 source URI, principal, content hash, detector verdicts, timestamp, signer identity, granularity),
 signs it (real Ed25519), and writes the signed record into the datastore. Two side indices make
-traceback and revocation cheap: a content-hash index (chunk hash to chunk id, O(1) suspect
+traceback and revocation cheap: a content-hash index (chunk hash to matching chunk ids, one indexed
 resolution) and a principal index (principal to its chunk-id set, O(k) revocation without a corpus
 scan).
 
 Modules: `config`, `logging_setup`, `hashing`, `signing` (Ed25519 + HMAC), `records`, `detectors`,
-`datastore`, `gate`, `traceback` (the constant-time lookup), `revocation` (batch revoke + manual
+`datastore`, `gate`, `traceback` (the indexed lookup), `revocation` (batch revoke + manual
 baseline), `synthetic` (labelled generator for the instrument-validation run), `corpus` (BEIR
 loader), `realdata` (third-party PoisonedRAG/RAGOrigin loaders, pinned by SHA-256), `llm_judge`
 (the published RAGForensics judge served by a local model), `realeval` (E2: RAGtrap lookup, the
 RAGForensics judge baseline, and the RAGOrigin responsibility-scoring baseline, all on identical
-suspects) / `realeval3`, `scaling` (E3 MTTR + ingestion cost on the full corpus), `asr` (E4),
+suspects) / `realeval3`, `scaling` (E3 in-memory removal + ingestion cost), `asr` (E4),
 `stats` (Wilson + bootstrap CIs), `manifest`, `experiments`. Console entry point: `ragtrap`.
 
 ### Reproducibility
@@ -71,7 +73,7 @@ Behaviour is environment-driven (prefix `RAGTRAP_`). Every run logs to console a
 so the repo holds only code, results, and the paper. One command runs everything:
 `bash scripts/reproduce.sh`.
 
-## 4. Datasets (all third-party, pinned by SHA-256)
+## 4. Datasets
 
 | Artifact | Source | Role | Pinned digest (sha256, first 16) |
 |---|---|---|---|
@@ -93,7 +95,7 @@ identical suspects.
 Run all: `bash scripts/reproduce.sh`. The RAGOrigin baseline is added by
 `scripts/run_ragorigin_baseline.py`. Per-experiment commands and outputs below; results land in
 `results/{e0_results,real_results,scaling_results,aux_results}.json` and are aggregated into
-`results/results.json` and `paper/macros.tex`. The paper labels the four experiments E1-E4.
+`results/results.json` and `results/macros.tex`. The paper labels the four experiments E1-E4.
 
 ### E1 -- Instrument validation
 
@@ -111,8 +113,9 @@ python scripts/run_real_eval.py --feedback <RAGOrigin feedback> \
 python scripts/run_ragorigin_baseline.py --feedback <RAGOrigin feedback> \
   --proxy-model Qwen/Qwen2.5-3B-Instruct --top-k 10
 ```
-Ingest each question's retrieved contexts through the gate (poison -> attacker principal, clean ->
-benign sources). Suspects are the top-10 retrieved contexts per question (1000 suspects: 500
+The released feedback contains poison labels but no admission provenance. The evaluation assigns
+poisoned passages to one attacker principal and clean passages to synthetic benign principals
+before ingesting them through the gate. Suspects are the top-10 retrieved contexts per question (1000 suspects: 500
 poison, 500 clean). Three attributors run on the identical suspects: RAGtrap's content-hash lookup;
 the published RAGForensics judge loop (one local-model call per context, parsing the verbatim
 `[Label: Yes/No]` tag from `RAGForensics/main.py`); and the published RAGOrigin responsibility
@@ -127,8 +130,8 @@ RAGForensics judge:  recall 0.956 [0.934,0.971]  precision 0.882 [0.852,0.906]  
 (Qwen2.5-3B-Instruct) latency 1.65 s/suspect (total 1654 s), 1000 model calls
 RAGOrigin scoring:   recall 1.000 [0.992,1.000]  precision 0.988 [0.974,0.995]  FPR 0.012  FNR 0.000
 (Qwen2.5-3B-Instruct) latency 64.5 ms/suspect (total 64.5 s), 2000 model calls
-RAGtrap lookup:      latency 101.7 us/suspect (total 0.10 s), 1000 lookups, 0 model calls
-end-to-end latency speedup: 16274x vs RAGForensics, 634x vs RAGOrigin
+RAGtrap lookup:      latency 78.7 us/suspect (total 0.079 s), 1000 lookups, 0 model calls
+latency ratio:       21026x vs RAGForensics, 819x vs RAGOrigin
 ```
 
 All three attributors run locally (the judge and proxy served by a local Qwen2.5-3B-Instruct), so
@@ -138,25 +141,23 @@ false-positive profile (FPR <= 0.03 across datasets), confirming the implementat
 
 Interpretation: both baselines are accurate forensic tools but pay 1000 and 2000 local model calls
 respectively over the 1000 suspects. RAGtrap reads the principal sealed at ingestion with one
-content-hash lookup per suspect (101.7 us/suspect), about **16274x** faster than the judge and
-**634x** faster than the proxy scorer, with no model invocation. While provenance is intact a
-lookup returns the recorded principal directly, so RAGtrap's accuracy under intact provenance is
-not a detection score and is not reported as one; the informative axes are the cost comparison
-above and the drift curve below.
+content-hash lookup per suspect (78.7 us/suspect), about **21026x** the judge latency and
+**819x** the proxy latency, with no model invocation. A lookup returns a principal only when all
+records with identical bytes agree on one source. Five poisoned suspects are ambiguous because
+the same bytes occur under different source identities.
 
-E2-drift: paraphrasing a fraction `p` of poisoned suspects after ingestion makes their retrieved
-bytes differ from the sealed bytes, so the hash lookup misses them. Recall drops from 1.00 at p=0
-to 0.702 [0.660,0.740] at p=0.3 and 0.508 [0.464,0.552] at p=0.5; precision stays exact (a hash
-match is exact, the missed chunks are false negatives).
+E2-drift: recall is 0.990 [0.977,0.996] without drift because five cross-source duplicates are
+ambiguous. Rewriting a fraction `p` of poisoned suspects adds hash misses. Recall is 0.694
+[0.652,0.733] at p=0.3 and 0.504 [0.460,0.548] at p=0.5; returned attributions remain precise.
 
-### E3 -- Revocation MTTR and ingestion cost at full corpus scale
+### E3 -- Source revocation and in-memory removal cost
 
 Command:
 ```
 python scripts/run_scaling.py --parquet <BEIR nq parquet> --poisonedrag <PoisonedRAG nq.json> \
   --sizes 10000,100000,1000000,2681468
 ```
-Real captured output (MTTR ratio = manual / revoke):
+Real captured output (in-memory scan/indexed-removal ratio):
 ```
    10000 passages ->   17748 chunks; sign 86.9 us/chunk; revoke 41.4 us; manual    1.8 ms; ratio    44x
   100000 passages ->  171989 chunks; sign 86.0 us/chunk; revoke 52.0 us; manual   32.6 ms; ratio   627x
@@ -165,16 +166,18 @@ Real captured output (MTTR ratio = manual / revoke):
 signing backends @100k: ed25519 63.4 us/chunk, hmac 33.0 us/chunk, ratio 1.92x
 ```
 Interpretation: `revoke-source` enumerates the compromised principal's 100 chunks from the index
-and purges them in ~46 microseconds regardless of corpus size, while the manual full-corpus scan
-grows linearly to 782 ms at 4.36M chunks: a **16931x** MTTR advantage on the full
-2,681,468-passage corpus. The advantage is structural (O(revoked) vs O(corpus)) and grows with
-corpus size (44x -> 627x -> 6977x -> 16931x). Real Ed25519 per-chunk signing is ~69-90 us/chunk
+and removes them in ~46 microseconds in the prototype, while an in-memory full-corpus scan grows
+to 782 ms at 4.36M chunks. The ratio is structural (O(revoked) vs O(corpus)) and grows with
+corpus size (44x -> 627x -> 6977x -> 16931x). It excludes database persistence, network access,
+cache invalidation, and detector latency. Real Ed25519 per-chunk signing is ~69-90 us/chunk
 (11k-16k chunks/s single-threaded), about 1.9x the symmetric HMAC stand-in, in exchange for
-non-repudiable public-key provenance. E3 also contrasts per-chunk against per-document granularity:
-for 206 real NQ passages each injected with 3 real PoisonedRAG passages under one principal, the
+non-repudiable public-key provenance. E3 also contrasts source-indexed revocation with
+document-level purging. Each mixed document retains benign-source identities for its NQ chunks
+and assigns the injected PoisonedRAG passages to one compromised source. The
 per-document scheme over-purges clean fragments at a false-purge rate of **0.521** (95% Wilson CI
-[0.494, 0.548]; 672 of 1290 removed chunks were clean), while RAGtrap's per-chunk scheme has
-false-purge rate **0.000**. Exact numbers in `results/aux_results.json`.
+[0.494, 0.548]; 672 of 1290 removed chunks were clean), while source-indexed revocation has
+false-purge rate **0.000**. Poison labels evaluate collateral and recall but never select removals.
+Exact numbers are in `results/aux_results.json`.
 
 ### E4 -- End-to-end attack-success context
 

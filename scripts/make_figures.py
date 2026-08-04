@@ -1,18 +1,17 @@
 """Generate the paper's results figures from results/*.json.
 
-Reads the canonical experiment outputs and emits paper/figs/*.pdf. Every plotted
+Reads the canonical experiment outputs and emits a publication-ready PDF. Every plotted
 value comes from a JSON file; nothing is recomputed or hardcoded here beyond
 selecting and formatting. Run after the experiments, before compiling the paper:
 
-    python scripts/make_figures.py
+    python scripts/make_figures.py [--out PATH]
 
-Emits:
-* paper/figs/drift_recall.pdf   -- E2 traceback recall vs post-ingestion drift (95% Wilson CIs)
-* paper/figs/revoke_scaling.pdf -- E3 surgical-revocation MTTR advantage vs corpus scale
+The default output is ``results/results_panels.pdf``.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -23,7 +22,6 @@ import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "results"
-FIGS = ROOT / "paper" / "figs"
 
 # Shared style: each panel renders at ~half \columnwidth, so use a compact
 # short aspect ratio that reads well when scaled to 0.49\columnwidth.
@@ -107,7 +105,7 @@ def fig_drift(real: dict, ax) -> None:
 
 
 def fig_revoke(scaling: dict, ax) -> None:
-    """Surgical-revocation MTTR vs manual scan across corpus scale (log y)."""
+    """Indexed removal latency vs manual scan across corpus scale (log y)."""
     pts = scaling["scale_points"]
     sizes = [p["n_clean_passages"] for p in pts]
     revoke_ms = [p["revoke_mttr_s"] * 1e3 for p in pts]
@@ -125,12 +123,12 @@ def fig_revoke(scaling: dict, ax) -> None:
         revoke_ms,
         marker="o",
         color="#1f3b73",
-        label="Surgical revoke",
+        label="Indexed revoke",
     )
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel("Clean corpus size (passages)")
-    ax.set_ylabel("MTTR (ms)")
+    ax.set_ylabel("Removal latency (ms)")
     # extra top headroom so no ratio label is clipped by the frame or overlaps
     # the upper-left legend. Place each ratio below-left of its manual point so
     # the labels sit between the two curves, clear of the top/right edge. The
@@ -154,11 +152,14 @@ def fig_revoke(scaling: dict, ax) -> None:
         )
     ax.grid(True, which="both", linewidth=0.4, alpha=0.35)
     ax.legend(loc="upper left", frameon=False)
-    ax.set_title("(b) Revocation MTTR vs. scale")
+    ax.set_title("(b) Revocation latency vs. scale")
 
 
 def main() -> int:
-    FIGS.mkdir(parents=True, exist_ok=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", type=Path, default=RESULTS / "results_panels.pdf")
+    args = parser.parse_args()
+    args.out.parent.mkdir(parents=True, exist_ok=True)
     real = _load("real_results.json")
     scaling = _load("scaling_results.json")
     # Both panels in ONE figure so they share sizing, fonts, and baselines.
@@ -166,9 +167,9 @@ def main() -> int:
     fig_drift(real, ax1)
     fig_revoke(scaling, ax2)
     fig.tight_layout(pad=0.6)
-    fig.savefig(FIGS / "results_panels.pdf")
+    fig.savefig(args.out)
     plt.close(fig)
-    print(f"wrote {FIGS/'results_panels.pdf'}")
+    print(f"wrote {args.out}")
     return 0
 
 

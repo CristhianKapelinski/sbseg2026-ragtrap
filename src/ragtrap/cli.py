@@ -7,7 +7,7 @@ Subcommands:
   reproduction path used by artifact evaluation.
 * ``selftest`` -- run only E0 (instrument validation on synthetic data) for a fast smoke test.
 * ``demo`` -- a minimal end-to-end demonstration of ingest -> traceback -> revoke-source on a
-  small synthetic corpus, printing the constant-time lookup and the one-command purge.
+  small synthetic corpus, printing the indexed lookup and the one-command purge.
 
 Everything is configured via environment variables (see ``config.py``); nothing is hardcoded.
 Every run writes a timestamped log under ``logs/`` and records inputs by content digest.
@@ -126,7 +126,7 @@ def cmd_demo(args: argparse.Namespace) -> int:
     attributed = {cid: p for cid, p in attribution.attributions.items() if p is not None}
     print(f"ingested chunks: {len(store)}")
     print(f"suspect chunks: {len(suspects)}")
-    print(f"traceback attributed {len(attributed)} suspects via one O(1) lookup each")
+    print(f"traceback attributed {len(attributed)} suspects via one indexed lookup each")
     print(f"traceback work units (lookups): {attribution.work_units}")
 
     target = "attacker-0"

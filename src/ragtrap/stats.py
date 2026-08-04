@@ -2,7 +2,7 @@
 
 Proportions (recall, precision, FPR, FNR, false-purge rate) are reported with a 95% Wilson score
 interval, which is well-behaved near 0 and 1 and for small N, unlike the normal approximation.
-Latencies and MTTR are reported with a nonparametric bootstrap CI over repeats.
+Latency helpers support nonparametric bootstrap intervals over repeated measurements.
 """
 
 from __future__ import annotations

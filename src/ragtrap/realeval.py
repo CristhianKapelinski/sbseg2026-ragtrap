@@ -13,7 +13,7 @@ Forensic time. The suspects are the top-``k`` retrieved contexts per question, i
 an attacked RAG pipeline feeds the language model. Two attributors run on the *identical* suspect
 list:
 
-* **RAGtrap**: one constant-time content-hash lookup per suspect, resolving the signed record and
+* **RAGtrap**: one indexed content-hash lookup per suspect, resolving the signed record and
   reading its principal. A suspect is flagged poisoned iff its principal is an attacker principal.
 * **RAGForensics (baseline)**: the published LLM-judge loop (one model call per context), run on a
   local GPU model over the same contexts; see :mod:`ragtrap.llm_judge`.

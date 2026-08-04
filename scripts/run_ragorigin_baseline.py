@@ -29,6 +29,7 @@ def main() -> int:
     ap.add_argument("--feedback", required=True)
     ap.add_argument("--proxy-model", default="Qwen/Qwen2.5-3B-Instruct")
     ap.add_argument("--top-k", type=int, default=10)
+    ap.add_argument("--max-questions", type=int, default=0)
     ap.add_argument("--out", default="results/real_results.json")
     args = ap.parse_args()
 
@@ -37,7 +38,12 @@ def main() -> int:
           f"running RAGOrigin scoring over top-{args.top_k} suspects "
           f"with proxy {args.proxy_model} ...", flush=True)
 
-    res = run_e1_baseline_ragorigin(fb, proxy_model=args.proxy_model, top_k=args.top_k)
+    res = run_e1_baseline_ragorigin(
+        fb,
+        proxy_model=args.proxy_model,
+        top_k=args.top_k,
+        max_questions=args.max_questions or None,
+    )
 
     out_path = Path(args.out)
     bundle = json.loads(out_path.read_text(encoding="utf-8")) if out_path.exists() else {}

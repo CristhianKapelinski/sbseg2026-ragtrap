@@ -14,7 +14,7 @@
   },
   "E3": {
     "experiment": "E3_granularity",
-    "data": "real BEIR nq passages + injected real PoisonedRAG passages (one principal/doc)",
+    "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
     "n_documents": 206,
     "poison_per_doc": 3,
     "per_document": {
@@ -73,7 +73,7 @@
   },
   "E3_sweep": {
     "experiment": "E3_poison_per_doc_sweep",
-    "data": "real BEIR nq passages + injected real PoisonedRAG passages (one principal/doc)",
+    "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
     "poison_per_doc_values": [
       1,
       2,

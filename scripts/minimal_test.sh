@@ -3,9 +3,9 @@
 #
 # Exercises the real pipeline end to end on a synthetic labelled corpus and runs the unit suite:
 #   1. ragtrap selftest -- E1 instrument validation: sign every chunk, reject a tampered message,
-#      attribute suspects by O(1) lookup, and revoke exactly one principal's chunks with no
+#      attribute suspects by indexed lookup, and revoke exactly one principal's chunks with no
 #      collateral. Prints JSON and asserts "instrument_valid": true.
-#   2. ragtrap demo     -- a concrete ingest -> O(1) traceback -> one-command revoke-source run,
+#   2. ragtrap demo     -- a concrete ingest -> indexed traceback -> source-revocation run,
 #      printing the ingested/suspect counts, the lookup work units, and the purge.
 #   3. pytest           -- the unit suite (signing, datastore, traceback, revocation, stats).
 #
@@ -19,7 +19,7 @@ echo "== [1/3] ragtrap selftest (E1 instrument validation) =="
 uv run ragtrap selftest
 
 echo
-echo "== [2/3] ragtrap demo (ingest -> O(1) traceback -> revoke-source) =="
+echo "== [2/3] ragtrap demo (ingest -> indexed traceback -> revoke-source) =="
 uv run ragtrap demo
 
 echo

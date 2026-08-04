@@ -4,14 +4,14 @@
 # Default (fast, model-free, CPU-only, deterministic, ~10 s + a one-time ~6 MB fetch):
 #   * E3 false-purge, per-document vs per-chunk : 0.52 vs 0.00  (the lead result, contribution C1)
 #   * E2 traceback latency + work units, 0 model calls
-#   * E2-drift recall at p = 0.0 / 0.3 / 0.5    : 1.00 / 0.70 / 0.51
+#   * E2-drift recall at p = 0.0 / 0.3 / 0.5    : 0.99 / 0.69 / 0.50
 # Writes results/main_results.json (.headline maps one-to-one to the paper).
 #
 #   ./scripts/experiment_main.sh
 #
 # Full (slow, ~60-90 min, needs a CUDA GPU + a one-time model download + the 764 MB corpus):
 # adds the model-served RAGForensics LLM-judge and RAGOrigin proxy baselines (E2), the full
-# 2,681,468-passage scaling sweep (E3 MTTR + signing cost), and the attack-success context (E4).
+# 2,681,468-passage scaling sweep (E3 removal latency + signing cost), and E4 attack context.
 # Refreshes results/results.json and results/macros.tex.
 #
 #   ./scripts/experiment_main.sh --full          # every paper number (E1-E4)
@@ -63,4 +63,5 @@ echo
 echo "Headline numbers in results/main_results.json (.headline)."
 if [ "$FULL" = "1" ]; then
   echo "Full results in results/results.json; paper macros in results/macros.tex."
+  uv run python scripts/verify_paper_values.py
 fi

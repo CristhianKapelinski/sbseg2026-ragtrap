@@ -1,17 +1,13 @@
-"""E3: per-chunk vs per-document revocation granularity on real partially-poisoned documents.
+"""E3: source-indexed revocation versus document-level purging.
 
-A realistic partially-poisoned document is built from a real benign BEIR NQ passage (split into
-clean chunks) into which an attacker injects a few real PoisonedRAG adversarial passages, all
-attributed to one principal (the compromised source). Revoking that principal:
+A partially-poisoned document combines chunks from a benign BEIR NQ source with adversarial
+passages supplied by one compromised source. The experiment compares two recovery operations:
 
-* under **per-document** granularity purges the whole document, including its clean chunks: a
-  false purge of legitimate content; while
-* under **per-chunk** granularity (RAGtrap) localises and removes only the poisoned chunks.
+* document-level purging removes the whole mixed document, including its clean chunks; and
+* source-indexed revocation removes every chunk attributed to the compromised source.
 
-Both false-purge counts are *measured* by actually running the revocation against the datastore
-and counting how many of the removed chunks were clean, rather than asserted: the per-chunk count
-is expected to be 0 by construction (per-chunk revocation removes exactly the attributed poison
-chunks), but the experiment confirms that property empirically instead of hard-coding it.
+The poison labels are used only to evaluate collateral removal and poison recall. They never
+select the chunks to remove.
 
 We sample many such documents and report the false-purge rate of each scheme with a 95% Wilson
 CI over the pooled removed chunks, so the contrast is an interval, not a single hand-built number.
@@ -27,24 +23,23 @@ import random
 
 from .gate import chunk_text, ingest, ingest_per_document
 from .records import Chunk
-from .revocation import revoke_source
+from .revocation import purge_document, revoke_source
 from .scaling import iter_beir_parquet
 from .signing import Ed25519Signer
 from .stats import wilson
-from .traceback import ragtrap_traceback
 
 
 def _build_mixed_document(
-    benign_text: str, poison_texts: list[str], *, doc_id: str, principal: str,
+    benign_text: str, poison_texts: list[str], *, doc_id: str, compromised_principal: str,
     chunk_chars: int = 512, overlap: int = 64,
 ) -> list[Chunk]:
-    """Real benign passage chunks + injected real poison passages, all under one principal."""
+    """Combine a benign source with passages supplied by one compromised source."""
     clean = chunk_text(
         benign_text,
         chunk_chars=chunk_chars,
         overlap=overlap,
         source_uri=f"beir://nq/{doc_id}",
-        principal=principal,
+        principal=f"benign-source-{doc_id}",
         document_id=doc_id,
         is_poisoned=False,
     )
@@ -53,7 +48,7 @@ def _build_mixed_document(
             chunk_id=f"{doc_id}::p{i}",
             text=t,
             source_uri=f"beir://nq/{doc_id}",
-            principal=principal,
+            principal=compromised_principal,
             is_poisoned=True,
             document_id=doc_id,
         )
@@ -91,14 +86,16 @@ def run_e3_granularity(
     per_chunk_poison_total = 0
     docs_used = 0
 
-    for idx, (pid, title, text) in enumerate(passages):
+    for pid, title, text in passages:
         if docs_used >= n_documents:
             break
         body = f"{title}\n{text}" if title else text
-        principal = f"compromised-source-{idx}"
+        principal = "compromised-source"
         doc_id = f"beir-{pid}-mix"
         poison_texts = rng.sample(poison_pool, min(poison_per_doc, len(poison_pool)))
-        corpus = _build_mixed_document(body, poison_texts, doc_id=doc_id, principal=principal)
+        corpus = _build_mixed_document(
+            body, poison_texts, doc_id=doc_id, compromised_principal=principal
+        )
         n_clean = sum(1 for c in corpus if not c.is_poisoned)
         n_poison = sum(1 for c in corpus if c.is_poisoned)
         if n_clean < min_clean_chunks:
@@ -107,42 +104,27 @@ def run_e3_granularity(
         clean_ids = {c.chunk_id for c in corpus if not c.is_poisoned}
         signer = Ed25519Signer.generate()
 
-        # Per-document scheme: revoking the principal purges every chunk of the document.
-        # We run the actual revocation and count the clean chunks that were removed, rather than
-        # assuming it; under document granularity the principal's chunk set is the whole document,
-        # so every clean chunk is collateral.
+        # The document-level baseline removes every chunk in the mixed document.
         store_doc = ingest_per_document(corpus, signer)
-        doc_rev = revoke_source(store_doc, principal)
+        doc_rev = purge_document(store_doc, doc_id)
         per_doc_total_purged += doc_rev.n_purged
         per_doc_false_purged += sum(1 for cid in doc_rev.purged_chunk_ids if cid in clean_ids)
 
-        # Per-chunk scheme (RAGtrap): attribute and localise the poisoned chunks only, then
-        # actually remove exactly those chunks from the store and MEASURE the collateral, i.e.
-        # how many clean chunks disappeared. This is computed from the post-revocation store, not
-        # hard-coded; it is expected (and here confirmed) to be 0 because per-chunk granularity
-        # targets only the attributed poison chunks.
+        # RAGtrap selects chunks only through the source index. Ground-truth labels are used below
+        # to measure collateral removal and poison recall, not to drive the operation.
         store_chunk, _ = ingest(corpus, signer)
-        suspects = [c for c in corpus if c.is_poisoned]
-        gt = {c.chunk_id: c.principal for c in suspects}
-        attr = ragtrap_traceback(suspects, store_chunk, signer)
-        to_revoke = [cid for cid, p in attr.attributions.items() if p == principal]
         clean_present_before = sum(1 for cid in clean_ids if cid in store_chunk.chunks)
-        removed = 0
-        for cid in to_revoke:
-            if store_chunk.remove_chunk(cid):
-                removed += 1
+        source_rev = revoke_source(store_chunk, principal)
         clean_present_after = sum(1 for cid in clean_ids if cid in store_chunk.chunks)
-        # Genuine collateral = clean chunks that were present before revocation but are gone after.
         per_chunk_false_purged += clean_present_before - clean_present_after
-        per_chunk_total_purged += removed
-        per_chunk_poison_recall_hits += sum(
-            1 for cid, p in gt.items() if attr.attributions.get(cid) == p
-        )
+        per_chunk_total_purged += source_rev.n_purged
+        poison_ids = {c.chunk_id for c in corpus if c.is_poisoned}
+        per_chunk_poison_recall_hits += len(poison_ids & set(source_rev.purged_chunk_ids))
         per_chunk_poison_total += n_poison
 
     return {
         "experiment": "E3_granularity",
-        "data": "real BEIR nq passages + injected real PoisonedRAG passages (one principal/doc)",
+        "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
         "n_documents": docs_used,
         "poison_per_doc": poison_per_doc,
         "per_document": {
@@ -218,7 +200,7 @@ def sweep_e3_poison_per_doc(
 
     return {
         "experiment": "E3_poison_per_doc_sweep",
-        "data": "real BEIR nq passages + injected real PoisonedRAG passages (one principal/doc)",
+        "data": "real BEIR nq sources + injected PoisonedRAG passages from one compromised source",
         "poison_per_doc_values": list(poison_per_doc_values),
         "points": points,
     }

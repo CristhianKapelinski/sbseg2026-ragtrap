@@ -1,4 +1,4 @@
-"""Poisoning traceback: RAGtrap's constant-time signature lookup.
+"""Poisoning traceback through RAGtrap's indexed content-hash lookup.
 
 Given a set of *suspect* chunks (e.g. surfaced by a query-time filter or by an incident report's
 retrieved contexts), traceback attributes each one to its source principal.

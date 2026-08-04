@@ -25,6 +25,18 @@ def test_revoke_source_purges_exactly_target_principal() -> None:
     assert all(r.principal != "attacker-0" for r in store.records.values())
 
 
+def test_revoked_source_cannot_be_ingested_again() -> None:
+    chunks = generate_corpus(
+        n_chunks=20, n_principals=2, poison_fraction=0.2, seed=7, poisoned_principals=1
+    )
+    signer = Ed25519Signer.generate()
+    store, _ = ingest(chunks, signer)
+    revoke_source(store, "attacker-0")
+    attacker_chunk = next(chunk for chunk in chunks if chunk.principal == "attacker-0")
+    with pytest.raises(ValueError, match="is revoked"):
+        ingest([attacker_chunk], signer, datastore=store)
+
+
 def test_revoke_and_manual_purge_remove_the_same_chunks() -> None:
     chunks = generate_corpus(
         n_chunks=100, n_principals=5, poison_fraction=0.2, seed=7, poisoned_principals=1
