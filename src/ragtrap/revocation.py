@@ -68,7 +68,9 @@ def manual_purge(datastore: ProvenanceDatastore, principal: str) -> RevocationRe
     """
     scanned = 0
     to_remove: list[str] = []
-    for chunk_id, record in list(datastore.records.items()):
+    # Iterating the live mapping is safe: this loop only reads, and removal is deferred to the
+    # second loop below, so no snapshot copy is needed.
+    for chunk_id, record in datastore.records.items():
         scanned += 1
         if record.principal == principal:
             to_remove.append(chunk_id)
