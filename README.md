@@ -112,7 +112,7 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 > **Two commands reproduce everything an evaluation needs, both on CPU, both under 20 seconds together.**
 >
 > - **`./scripts/minimal_test.sh`** (~1 s): the functional check. No network, no dataset, no GPU.
-> - **`./scripts/claim1.sh`**, **`./scripts/claim2.sh`**, **`./scripts/claim3.sh`** (~8 s the first, instant the rest): one command per claim. Each is self-contained, reproduces the fast experiment when its result is missing, and prints the paper's value next to this machine's with an `OK`/`FAIL` per line and a non-zero exit on any mismatch.
+> - **`./scripts/claim1.sh`**, **`./scripts/claim2.sh`**, **`./scripts/claim3.sh`** (instant each, since the results ship committed; ~8 s if you delete `results/main_results.json` to force the reproduction): one command per claim. Each is self-contained, reproduces the fast experiment when its result is missing, and prints the paper's value next to this machine's with an `OK`/`FAIL` per line and a non-zero exit on any mismatch.
 > - **`uv run python scripts/verify_paper_values.py`** (instant): compares **all 98 numbers** the paper asserts against the committed results and prints `PASS / FAIL`. This is the strongest single check in the artifact.
 > - **`--full` is optional and expensive**: 60 to 90 minutes and one CUDA GPU, because it serves a local model for the two forensic baselines and for Claim \#3. Skip it unless you specifically want those baselines; the pre-computed outputs of that run are already committed under [`results/`](results/).
 
@@ -143,7 +143,7 @@ Each claim below is **one command** and defaults to a **fast variant**. The slow
   ./scripts/claim1.sh
   ```
 - **Flags:** none.
-- **Expected time:** ~8 s from a clean clone (reproduces the experiment), instant when the result already exists.
+- **Expected time:** instant, because `results/main_results.json` ships committed. Delete it to force the reproduction and the script re-runs the fast experiment first: ~8 s measured on the reference machine.
 - **Expected resources:** CPU only, ~41 MB peak. No GPU, no dataset download beyond the one-time ~6 MB fetch.
 - **Expected result:** the script prints this block and exits 0. Times and memory are hardware-dependent and are reported but not gated; the five values above the line are.
   ```text
@@ -171,7 +171,7 @@ Each claim below is **one command** and defaults to a **fast variant**. The slow
   ./scripts/claim2.sh
   ```
 - **Flags:** none.
-- **Expected time:** instant when Claim \#1 already ran; ~8 s otherwise.
+- **Expected time:** instant. As in Claim \#1, deleting `results/main_results.json` first makes it reproduce the experiment (~8 s) instead of reading it.
 - **Expected resources:** CPU only, < 1 GB RAM (~42 MB peak measured).
 - **Expected result:**
   ```text
