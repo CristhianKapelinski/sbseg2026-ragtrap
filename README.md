@@ -20,6 +20,7 @@ RAGtrap is a recovery layer for retrieval-augmented-generation (RAG) corpora. It
 | [Minimal Test](#minimal-test) | One-command end-to-end functional check (~1 s) |
 | [Experiments](#experiments) | Reproduction of the paper's claims (check + Exp. 1-3) |
 | [License](#license) | Licensing information |
+| [How to cite](#how-to-cite) | Paper reference and machine-readable `CITATION.cff` |
 
 ---
 
@@ -223,3 +224,22 @@ Exact numbers (with 95% Wilson CIs and N) for the full run are in [`results/resu
 ## License
 
 This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for the full text.
+
+## How to cite
+
+Cite the paper, not the repository:
+
+> Kapelinski, C. and Kreutz, D. (2026). RAGtrap: Source Revocation and Indexed Provenance Lookup for Poisoned RAG Corpora. In *Anais do XXVII Simpósio Brasileiro de Segurança da Informação e de Sistemas Computacionais (SBSeg 2026), Workshop de Trabalhos de Iniciação Científica e de Graduação (WTICG)*. Sociedade Brasileira de Computação.
+
+```bibtex
+@inproceedings{kapelinski2026sbseg2026rag,
+  author    = {Kapelinski, Cristhian and Kreutz, Diego},
+  title     = {RAGtrap: Source Revocation and Indexed Provenance Lookup for Poisoned RAG Corpora},
+  booktitle = {Anais do XXVII Simpósio Brasileiro de Segurança da Informação e de Sistemas Computacionais (SBSeg 2026), Workshop de Trabalhos de Iniciação Científica e de Graduação (WTICG)},
+  year      = {2026},
+  publisher = {Sociedade Brasileira de Computação},
+}
+```
+
+[`CITATION.cff`](CITATION.cff) carries the same metadata in machine-readable form, so GitHub's
+"Cite this repository" button and tools such as Zenodo pick it up automatically.
