@@ -80,8 +80,8 @@ so the repo holds only code, results, and the paper. One command runs everything
 | PoisonedRAG `nq.json` (500 adv passages) | github.com/sleeepeer/PoisonedRAG | the attack | `44df711454a9bada` |
 | RAGOrigin feedback `k5_m5_e5_gpt-4o-mini.json` | github.com/zhangbl6618/RAG-Responsibility-Attribution | suspects + labels + the baseline's own input | `658419c9411ee685` |
 | BEIR `nq` corpus (2,681,468 passages) | HF `BeIR/nq` (config `corpus`) | clean substrate | parquet `num_rows=2681468` |
-| `intfloat/e5-base-v2` | HF | the dense retriever (third-party, as released the feedback was built with e5) | — |
-| `Qwen/Qwen2.5-3B-Instruct` | HF | local model serving the RAGForensics judge, the RAGOrigin proxy scorer, and the Exp. 3 generation | — |
+| `intfloat/e5-base-v2` | HF | the dense retriever (third-party, as released the feedback was built with e5) | n/a |
+| `Qwen/Qwen2.5-3B-Instruct` | HF | local model serving the RAGForensics judge, the RAGOrigin proxy scorer, and the Exp. 3 generation | n/a |
 
 The RAGOrigin feedback is the key substrate: for each of 100 NQ target questions it carries the
 top-100 contexts surfaced by the real e5 retriever, each with a third-party poisoned/clean label
