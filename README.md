@@ -116,15 +116,9 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 > - **`uv run python scripts/verify_paper_values.py`** (instant): compares **all 98 numbers** the paper asserts against the committed results and prints `PASS / FAIL`. This is the strongest single check in the artifact.
 > - **`--full` is optional and expensive**: 60 to 90 minutes and one CUDA GPU, because it serves a local model for the two forensic baselines and for Claim \#3. Skip it unless you specifically want those baselines; the pre-computed outputs of that run are already committed under [`results/`](results/).
 
-The paper has four experiments. The instrument check is covered by the [Minimal Test](#minimal-test). The **main claim is \#2** (source-indexed revocation versus document-level false purge), reproduced together with Claim \#1 by the fast, model-free [`scripts/experiment_main.sh`](scripts/experiment_main.sh) into `results/main_results.json`.
+The paper has four experiments. The instrument check is covered by the [Minimal Test](#minimal-test). The **main claim is \#2**, source-indexed revocation versus document-level false purge.
 
-Each claim below is **one command** and defaults to a **fast variant**. The slow, GPU + model-served full run is gated behind `--full`; a reviewer who does not run it may instead inspect the pre-computed, real outputs already committed under [`results/`](results/) (`results.json`, `*_results.json`, `macros.tex`).
-
-> Run the fast main experiment once; it produces the headline used by Claims \#1 and \#2 below:
-> ```bash
-> ./scripts/experiment_main.sh
-> ```
-> **Measured on the reference machine: ~10 s** (CPU only; the one-time ~6 MB input fetch is included). Writes `results/main_results.json`.
+Each claim below is **one command** that needs no preparation: the script reproduces the fast, model-free experiment itself when `results/main_results.json` is absent, then prints the paper's value next to this machine's. The slow, GPU and model-served run is gated behind `--full`; a reviewer who does not run it inspects the pre-computed real outputs already committed under [`results/`](results/) (`results.json`, `*_results.json`, `macros.tex`).
 
 ### Experiment mapping
 
