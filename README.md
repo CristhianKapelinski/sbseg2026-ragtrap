@@ -1,7 +1,5 @@
 # RAGtrap: Source Revocation and Indexed Provenance Lookup for Poisoned RAG Corpora
 
-[![artifact](https://github.com/CristhianKapelinski/sbseg2026-ragtrap/actions/workflows/artifact.yml/badge.svg)](https://github.com/CristhianKapelinski/sbseg2026-ragtrap/actions/workflows/artifact.yml)
-
 RAGtrap is a recovery layer for retrieval-augmented-generation (RAG) corpora. It records a signed provenance record for every ingested chunk and maintains indices by source and content hash. In the evaluated mixed documents, source revocation removes **0.00 benign-source content**, compared with a **0.52 false-purge rate** for document-level removal. Exact suspect chunks require one indexed lookup and no model request. The prototype uses an in-memory datastore, so its latency results measure the index algorithms rather than end-to-end vector-database remediation.
 
 > **Paper:** *RAGtrap: Source Revocation and Indexed Provenance Lookup for Poisoned RAG Corpora* (SBSeg 2026).
