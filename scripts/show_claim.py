@@ -73,7 +73,9 @@ def claim2() -> list[tuple[str, object, object, bool | None]]:
 
 
 def claim3() -> list[tuple[str, object, object, bool | None]]:
-    a = _load()["aux"]["exp3"]["attack_success"]
+    d = _load()
+    # results.json nests it under "aux"; a regenerated aux_results.json does not.
+    a = (d["aux"]["exp3"] if "aux" in d else d["exp3"])["attack_success"]
     pct = round(100 * a["k"] / a["n"])
     return [
         ("attack-success rate (%)", pct, 98, pct == 98),
@@ -85,7 +87,7 @@ def claim3() -> list[tuple[str, object, object, bool | None]]:
 CLAIMS = {
     "1": ("Forensic-time attribution and drift sensitivity", claim1),
     "2": ("Source revocation and false purge  (MAIN CLAIM)", claim2),
-    "3": ("Attack-success context (stored --full result)", claim3),
+    "3": ("Attack-success context", claim3),
 }
 
 
@@ -102,7 +104,7 @@ def main() -> int:
         print(_row(label, got, paper, ok))
     print(SEP)
     src = Path(os.environ.get("RAGTRAP_CLAIM_SRC", ""))
-    if src.name == "main_results.json" and src.parent.name == "claim_run":
+    if src.parent.name == "claim_run":
         print(f"  {'source of these numbers':<30}: recomputed on this machine just now")
     else:
         print(f"  {'source of these numbers':<30}: read from the committed --full run")

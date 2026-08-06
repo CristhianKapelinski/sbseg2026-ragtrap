@@ -19,6 +19,41 @@ recompute_main() {
     echo
 }
 
+# Regenerates ONLY the attack-success measurement of Claim #3, instead of the whole
+# --full run. It still needs a CUDA GPU and a one-time model download, because the
+# measurement is what a local generation model answers.
+recompute_exp3() {
+    mkdir -p "$LIVE_DIR"
+    echo "==> Regenerating Claim #3 on this machine"
+    echo "    (needs one CUDA GPU and a one-time download of the generation model)"
+    # A raw CUDA out-of-memory traceback tells the evaluator nothing. Check first, and
+    # say what is needed and what is actually free. The generation model needs ~6 GB.
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        local free_mib
+        free_mib=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1)
+        if [ -n "$free_mib" ] && [ "$free_mib" -lt 7000 ]; then
+            echo "ERROR: only ${free_mib} MiB of GPU memory is free; the generation model needs about 6 GB." >&2
+            echo "Free the GPU, or read the stored measurement instead with: ./scripts/claim3.sh" >&2
+            nvidia-smi --query-compute-apps=pid,used_memory --format=csv >&2
+            return 1
+        fi
+    else
+        echo "ERROR: nvidia-smi not found; --run needs one CUDA GPU." >&2
+        echo "Read the stored measurement instead with: ./scripts/claim3.sh" >&2
+        return 1
+    fi
+
+    local FETCH FEEDBACK POISONEDRAG
+    FETCH="$(uv run python scripts/fetch_inputs.py --root "${RAGTRAP_DATA_ROOT:-$HOME/.cache/ragtrap}")"
+    FEEDBACK="$(echo "$FETCH" | sed -n 's/^FEEDBACK=//p')"
+    POISONEDRAG="$(echo "$FETCH" | sed -n 's/^POISONEDRAG=//p')"
+    uv run --extra eval python scripts/run_check_exp2_exp3.py \
+        --parquet data/beir_nq_sample.parquet \
+        --poisonedrag "$POISONEDRAG" --feedback "$FEEDBACK" \
+        --out "$LIVE_DIR/aux_results.json"
+    echo
+}
+
 # Prints the claim block, timing the whole script and capturing peak RSS when
 # /usr/bin/time exists. Its absence is stated rather than silently skipped.
 run_claim() {
