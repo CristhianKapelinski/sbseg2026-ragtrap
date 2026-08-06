@@ -112,7 +112,7 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 > **Two commands reproduce everything an evaluation needs, both on CPU, both under 20 seconds together.**
 >
 > - **`./scripts/minimal_test.sh`** (~1 s): the functional check. No network, no dataset, no GPU.
-> - **`./scripts/claim1.sh`**, **`./scripts/claim2.sh`**, **`./scripts/claim3.sh`** (instant each, since the results ship committed; ~8 s if you delete `results/main_results.json` to force the reproduction): one command per claim. Each is self-contained, reproduces the fast experiment when its result is missing, and prints the paper's value next to this machine's with an `OK`/`FAIL` per line and a non-zero exit on any mismatch.
+> - **`./scripts/claim1.sh`** and **`./scripts/claim2.sh`** (~7 s each): one command per claim. Each **recomputes** the fast experiment on your machine into `results/claim_run/` rather than reading the committed results, then prints the paper's value next to the one it just produced, with an `OK`/`FAIL` per line and a non-zero exit on any mismatch. **`./scripts/claim3.sh`** is instant and reads the stored `--full` measurement, because regenerating it needs a GPU; its output says so.
 > - **`uv run python scripts/verify_paper_values.py`** (instant): compares **all 98 numbers** the paper asserts against the committed results and prints `PASS / FAIL`. This is the strongest single check in the artifact.
 > - **`--full` is optional and expensive**: 60 to 90 minutes and one CUDA GPU, because it serves a local model for the two forensic baselines and for Claim \#3. Skip it unless you specifically want those baselines; the pre-computed outputs of that run are already committed under [`results/`](results/).
 
@@ -132,12 +132,12 @@ Each claim below is **one command** that needs no preparation: the script reprod
 ## Claim \#1: Forensic-time attribution and drift sensitivity
 
 - **Description:** on the real PoisonedRAG attack over Natural Questions, RAGtrap performs one content-hash lookup for each of 1000 suspects and makes **0 model calls**. It returns a source only when all records with those bytes agree on one source. The two model-served forensic baselines infer origin from text, so this experiment compares architectural cost rather than equivalent detectors.
-- **Execution:** one command. It reproduces the fast main experiment first when `results/main_results.json` is absent, so it works from a clean clone.
+- **Execution:** one command. It **recomputes** the fast experiment on your machine into `results/claim_run/`, and never reads the committed results, so the value you see was produced here.
   ```bash
   ./scripts/claim1.sh
   ```
 - **Flags:** none.
-- **Expected time:** instant, because `results/main_results.json` ships committed. Delete it to force the reproduction and the script re-runs the fast experiment first: ~8 s measured on the reference machine.
+- **Expected time:** ~7 s measured on the reference machine, the recomputation included, plus a one-time ~6 MB input fetch on the first run.
 - **Expected resources:** CPU only, ~41 MB peak. No GPU, no dataset download beyond the one-time ~6 MB fetch.
 - **Expected result:** the script prints this block and exits 0. Times and memory are hardware-dependent and are reported but not gated; the five values above the line are.
   ```text
@@ -149,7 +149,11 @@ Each claim below is **one command** that needs no preparation: the script reprod
     recall at drift p=0.5         : 0.50         (paper 0.50)      OK
     work units (lookups)          : 1000         (paper 1000)      OK
     model calls                   : 0            (paper 0)         OK
-    per-suspect latency (us)      : 78.70
+    per-suspect latency (us)      : 79.10
+  ──────────────────────────────────────────────────────────────────
+    source of these numbers       : recomputed on this machine just now
+    wall clock on this machine    : 7 s
+    peak memory on this machine   : 41 MB
   ──────────────────────────────────────────────────────────────────
     RESULT: OK   (5/5 gated values match the paper)
   ══════════════════════════════════════════════════════════════════
@@ -160,12 +164,12 @@ Each claim below is **one command** that needs no preparation: the script reprod
 ## Claim \#2: Source revocation and in-memory removal latency **(main claim)**
 
 - **Description:** each mixed document contains benign NQ chunks under a benign source identity and PoisonedRAG chunks under one compromised-source identity. Document-level purging removes both; RAGtrap calls the source index and removes only chunks recorded under the compromised source. Poison labels evaluate the result but do not select removals.
-- **Execution:** one command, self-contained like Claim \#1.
+- **Execution:** one command, recomputed on your machine like Claim \#1.
   ```bash
   ./scripts/claim2.sh
   ```
 - **Flags:** none.
-- **Expected time:** instant. As in Claim \#1, deleting `results/main_results.json` first makes it reproduce the experiment (~8 s) instead of reading it.
+- **Expected time:** ~7 s measured on the reference machine; it recomputes rather than reading a stored value.
 - **Expected resources:** CPU only, < 1 GB RAM (~42 MB peak measured).
 - **Expected result:**
   ```text
@@ -177,6 +181,10 @@ Each claim below is **one command** that needs no preparation: the script reprod
       N documents                 : 1290         (paper 1290)      OK
     false purge, per chunk        : 0.00         (paper 0.00)      OK
   ──────────────────────────────────────────────────────────────────
+    source of these numbers       : recomputed on this machine just now
+    wall clock on this machine    : 7 s
+    peak memory on this machine   : 41 MB
+  ──────────────────────────────────────────────────────────────────
     RESULT: OK   (4/4 gated values match the paper)
   ══════════════════════════════════════════════════════════════════
   ```
@@ -185,7 +193,7 @@ Each claim below is **one command** that needs no preparation: the script reprod
 ## Claim \#3: Attack-success context (the suspects are genuinely harmful)
 
 - **Description:** feeding the top-5 retrieved contexts to a local generation model steers it to the attacker's target answer, confirming the attributed suspects are dangerous.
-- **Execution:** one command. It reports the measurement stored from the reference `--full` run, so no GPU is needed to check it.
+- **Execution:** one command. Unlike Claims \#1 and \#2 this one is **not** recomputed here: regenerating it needs a CUDA GPU, so the script reads the stored `--full` measurement and says so in its output.
   ```bash
   ./scripts/claim3.sh
   ```
@@ -199,6 +207,9 @@ Each claim below is **one command** that needs no preparation: the script reprod
     attack-success rate (%)       : 98           (paper 98)        OK
       questions                   : 100          (paper 100)       OK
       successes                   : 98           (paper 98)        OK
+  ──────────────────────────────────────────────────────────────────
+    source of these numbers       : read from the committed --full run
+                                    (results/results.json); regenerating it needs a CUDA GPU
   ──────────────────────────────────────────────────────────────────
     RESULT: OK   (3/3 gated values match the paper)
   ══════════════════════════════════════════════════════════════════

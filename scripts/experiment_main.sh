@@ -49,6 +49,10 @@ FEEDBACK="$(echo "$FETCH_OUT" | sed -n 's/^FEEDBACK=//p')"
 POISONEDRAG="$(echo "$FETCH_OUT" | sed -n 's/^POISONEDRAG=//p')"
 
 DRIVER_ARGS=(--feedback "$FEEDBACK" --poisonedrag "$POISONEDRAG")
+# Lets a caller send the run somewhere other than results/main_results.json. The claim
+# scripts use it to recompute into a scratch path, so that what they report is always
+# measured on the evaluator's machine and never the committed reference file.
+if [ -n "${RAGTRAP_MAIN_OUT:-}" ]; then DRIVER_ARGS+=(--out "$RAGTRAP_MAIN_OUT"); fi
 if [ "$FULL" = "1" ]; then DRIVER_ARGS+=(--full); fi
 if [ "$QUICK" = "1" ]; then DRIVER_ARGS+=(--quick); fi
 

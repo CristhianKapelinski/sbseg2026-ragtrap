@@ -20,10 +20,15 @@ BAR = "═" * 66
 SEP = "─" * 66
 
 
-def _load(name: str) -> dict:
-    path = RESULTS / name
+def _load(_name: str = "") -> dict:
+    """Read the results file the calling script pointed at.
+
+    Claims 1 and 2 are pointed at a run recomputed on this machine, never at the
+    committed reference, so that the reported value is measured here.
+    """
+    path = Path(os.environ.get("RAGTRAP_CLAIM_SRC", RESULTS / "main_results.json"))
     if not path.exists():
-        sys.exit(f"missing {path}. Run ./scripts/experiment_main.sh first.")
+        sys.exit(f"missing {path}. Run ./scripts/claim1.sh, which recomputes it.")
     return json.loads(path.read_text())
 
 
@@ -38,7 +43,7 @@ def _row(label: str, got, paper, ok: bool | None) -> str:
 
 
 def claim1() -> list[tuple[str, object, object, bool | None]]:
-    h = _load("main_results.json")["headline"]
+    h = _load()["headline"]
     return [
         ("recall at drift p=0.0", round(h["drift_recall_0.0"], 2), 0.99,
          round(h["drift_recall_0.0"], 2) == 0.99),
@@ -54,7 +59,7 @@ def claim1() -> list[tuple[str, object, object, bool | None]]:
 
 
 def claim2() -> list[tuple[str, object, object, bool | None]]:
-    h = _load("main_results.json")["headline"]
+    h = _load()["headline"]
     ci = h["false_purge_per_document_ci"]
     lo, hi = round(ci["ci_low"], 2), round(ci["ci_high"], 2)
     return [
@@ -68,7 +73,7 @@ def claim2() -> list[tuple[str, object, object, bool | None]]:
 
 
 def claim3() -> list[tuple[str, object, object, bool | None]]:
-    a = _load("results.json")["aux"]["exp3"]["attack_success"]
+    a = _load()["aux"]["exp3"]["attack_success"]
     pct = round(100 * a["k"] / a["n"])
     return [
         ("attack-success rate (%)", pct, 98, pct == 98),
@@ -96,6 +101,12 @@ def main() -> int:
     for label, got, paper, ok in rows:
         print(_row(label, got, paper, ok))
     print(SEP)
+    src = Path(os.environ.get("RAGTRAP_CLAIM_SRC", ""))
+    if src.name == "main_results.json" and src.parent.name == "claim_run":
+        print(f"  {'source of these numbers':<30}: recomputed on this machine just now")
+    else:
+        print(f"  {'source of these numbers':<30}: read from the committed --full run")
+        print(f"  {'':<30}  ({src}); regenerating it needs a CUDA GPU")
     # Cost measured on THIS machine by the calling script. Times and memory are
     # hardware-dependent, so they are reported and never gated.
     elapsed = os.environ.get("RAGTRAP_CLAIM_ELAPSED")
