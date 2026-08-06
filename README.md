@@ -112,7 +112,7 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 > **Two commands reproduce everything an evaluation needs, both on CPU, both under 20 seconds together.**
 >
 > - **`./scripts/minimal_test.sh`** (~1 s): the functional check. No network, no dataset, no GPU.
-> - **`./scripts/experiment_main.sh`** (~10 s): the fast path. It produces Claim \#1 and Claim \#2, including the main claim, and needs only a ~6 MB one-time fetch.
+> - **`./scripts/claim1.sh`**, **`./scripts/claim2.sh`**, **`./scripts/claim3.sh`** (~8 s the first, instant the rest): one command per claim. Each is self-contained, reproduces the fast experiment when its result is missing, and prints the paper's value next to this machine's with an `OK`/`FAIL` per line and a non-zero exit on any mismatch.
 > - **`uv run python scripts/verify_paper_values.py`** (instant): compares **all 98 numbers** the paper asserts against the committed results and prints `PASS / FAIL`. This is the strongest single check in the artifact.
 > - **`--full` is optional and expensive**: 60 to 90 minutes and one CUDA GPU, because it serves a local model for the two forensic baselines and for Claim \#3. Skip it unless you specifically want those baselines; the pre-computed outputs of that run are already committed under [`results/`](results/).
 
@@ -138,46 +138,78 @@ Each claim below is **one command** and defaults to a **fast variant**. The slow
 ## Claim \#1: Forensic-time attribution and drift sensitivity
 
 - **Description:** on the real PoisonedRAG attack over Natural Questions, RAGtrap performs one content-hash lookup for each of 1000 suspects and makes **0 model calls**. It returns a source only when all records with those bytes agree on one source. The two model-served forensic baselines infer origin from text, so this experiment compares architectural cost rather than equivalent detectors.
-- **Execution (fast, from the main experiment above):**
+- **Execution:** one command. It reproduces the fast main experiment first when `results/main_results.json` is absent, so it works from a clean clone.
   ```bash
-  uv run python -c "import json;h=json.load(open('results/main_results.json'))['headline'];print({k:h[k] for k in ('drift_recall_0.0','drift_recall_0.3','drift_recall_0.5','ragtrap_per_suspect_us','ragtrap_work_units','ragtrap_model_calls')})"
+  ./scripts/claim1.sh
   ```
-- **Expected time:** instant (reads the fast main result). **Expected resources:** CPU only.
-- **Expected result:** recall **0.99 / 0.69 / 0.50** at p = 0.0 / 0.3 / 0.5; per-suspect latency depends on the host; 1000 work units; **0 model calls**. Five poisoned suspects are ambiguous because identical bytes occur under different source identities.
+- **Flags:** none.
+- **Expected time:** ~8 s from a clean clone (reproduces the experiment), instant when the result already exists.
+- **Expected resources:** CPU only, ~41 MB peak. No GPU, no dataset download beyond the one-time ~6 MB fetch.
+- **Expected result:** the script prints this block and exits 0. Times and memory are hardware-dependent and are reported but not gated; the five values above the line are.
+  ```text
+  ══════════════════════════════════════════════════════════════════
+    Claim #1  Forensic-time attribution and drift sensitivity
+  ──────────────────────────────────────────────────────────────────
+    recall at drift p=0.0         : 0.99         (paper 0.99)      OK
+    recall at drift p=0.3         : 0.69         (paper 0.69)      OK
+    recall at drift p=0.5         : 0.50         (paper 0.50)      OK
+    work units (lookups)          : 1000         (paper 1000)      OK
+    model calls                   : 0            (paper 0)         OK
+    per-suspect latency (us)      : 78.70
+  ──────────────────────────────────────────────────────────────────
+    RESULT: OK   (5/5 gated values match the paper)
+  ══════════════════════════════════════════════════════════════════
+  ```
+  Five poisoned suspects are ambiguous because identical bytes occur under different source identities.
 - **Full variant (`--full`, GPU + model, ~30–60 min):** `./scripts/experiment_main.sh --full` runs the published RAGForensics LLM-judge and RAGOrigin proxy baselines on the identical suspects. In the stored reference run, the judge takes **1.65 s/suspect** (1000 model calls), RAGOrigin takes 64.5 ms/suspect (2000 calls), and RAGtrap takes **78.7 µs/suspect** (0 calls): **21,026x** and **819x** the lookup latency.
 
 ## Claim \#2: Source revocation and in-memory removal latency **(main claim)**
 
 - **Description:** each mixed document contains benign NQ chunks under a benign source identity and PoisonedRAG chunks under one compromised-source identity. Document-level purging removes both; RAGtrap calls the source index and removes only chunks recorded under the compromised source. Poison labels evaluate the result but do not select removals.
-- **Execution (fast, from the main experiment above):**
+- **Execution:** one command, self-contained like Claim \#1.
   ```bash
-  uv run python -c "import json;h=json.load(open('results/main_results.json'))['headline'];print('per-document FP',h['false_purge_per_document'],'| per-chunk FP',h['false_purge_per_chunk'])"
+  ./scripts/claim2.sh
   ```
-- **Expected time:** instant (reads the fast main result; the fast run that produced it is ~10 s). **Expected resources:** CPU only, < 1 GB RAM.
-- **Expected result:** false-purge **per-document 0.52** (95% Wilson CI [0.49, 0.55]) vs **per-chunk 0.00**.
+- **Flags:** none.
+- **Expected time:** instant when Claim \#1 already ran; ~8 s otherwise.
+- **Expected resources:** CPU only, < 1 GB RAM (~42 MB peak measured).
+- **Expected result:**
+  ```text
+  ══════════════════════════════════════════════════════════════════
+    Claim #2  Source revocation and false purge  (MAIN CLAIM)
+  ──────────────────────────────────────────────────────────────────
+    false purge, per document     : 0.52         (paper 0.52)      OK
+      95% Wilson CI               : [0.49, 0.55] (paper [0.49, 0.55])  OK
+      N documents                 : 1290         (paper 1290)      OK
+    false purge, per chunk        : 0.00         (paper 0.00)      OK
+  ──────────────────────────────────────────────────────────────────
+    RESULT: OK   (4/4 gated values match the paper)
+  ══════════════════════════════════════════════════════════════════
+  ```
 - **Full variant (`--full`, ~20–30 min, CPU):** the scaling sweep in `./scripts/experiment_main.sh --full`. In the stored in-memory run, locating and deleting 100 chunks takes **46.2 µs** with the source index and **782 ms** with a full scan. These measurements exclude vector-database persistence, network access, and cache invalidation. Real Ed25519 signing takes ~69–90 µs/chunk, ~1.9x the symmetric HMAC reference.
 
 ## Claim \#3: Attack-success context (the suspects are genuinely harmful)
 
 - **Description:** feeding the top-5 retrieved contexts to a local generation model steers it to the attacker's target answer, confirming the attributed suspects are dangerous.
-- **Execution (`--full` only, GPU, ~5 min):**
+- **Execution:** one command. It reports the measurement stored from the reference `--full` run, so no GPU is needed to check it.
   ```bash
-  ./scripts/experiment_main.sh --full
+  ./scripts/claim3.sh
   ```
-- **Expected time:** part of the ~60–90 min full run. **Expected resources:** 1 CUDA GPU (local generation model).
-- **Expected result:** attack-success rate **98%** (95% Wilson CI [0.93, 0.99]) over 100 questions, with a 0% correct-answer rate. Measured value stored in `results/aux_results.json`.
-
-### Regenerating the paper's figure
-
-The results panel the paper prints is regenerated from the same results file:
-
-```bash
-uv run python scripts/make_figures.py
-```
-
-It writes `results/results_panels.pdf`, which is the figure the paper includes. The
-figures use matplotlib's bundled font, so they render identically on any machine and
-need no system font installed.
+- **Flags:** none. To regenerate the measurement instead of reading it, run `./scripts/experiment_main.sh --full` (1 CUDA GPU, ~5 min inside the ~60 to 90 min full run).
+- **Expected time:** instant. **Expected resources:** CPU only (~41 MB peak) to read the stored result.
+- **Expected result:**
+  ```text
+  ══════════════════════════════════════════════════════════════════
+    Claim #3  Attack-success context (stored --full result)
+  ──────────────────────────────────────────────────────────────────
+    attack-success rate (%)       : 98           (paper 98)        OK
+      questions                   : 100          (paper 100)       OK
+      successes                   : 98           (paper 98)        OK
+  ──────────────────────────────────────────────────────────────────
+    RESULT: OK   (3/3 gated values match the paper)
+  ══════════════════════════════════════════════════════════════════
+  ```
+  The 95% Wilson CI is [0.93, 0.99] and the correct-answer rate is 0%, both in [`results/results.json`](results/results.json).
 
 Exact numbers (with 95% Wilson CIs and N) for the full run are in [`results/results.json`](results/results.json) and surfaced in [`results/macros.tex`](results/macros.tex). [`scripts/verify_paper_values.py`](scripts/verify_paper_values.py) compares every generated macro with the camera-ready values frozen in [`expected/paper_macros.tex`](expected/paper_macros.tex). Per-experiment outputs and interpretation are in [`DOCUMENTATION.md`](DOCUMENTATION.md).
 
