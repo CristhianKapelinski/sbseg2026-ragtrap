@@ -37,7 +37,7 @@ def _env_block() -> dict[str, object]:
 
 
 def run_check(cfg: Config) -> dict[str, object]:
-    """Instrument check -- instrument validation on synthetic data (correctness, not performance)."""
+    """Instrument check -- validation on synthetic data (correctness, not performance)."""
     log.info("check: instrument validation on synthetic data (labelled synthetic)")
     chunks = generate_corpus(
         n_chunks=200, n_principals=5, poison_fraction=0.1, seed=cfg.seed, poisoned_principals=1
@@ -91,7 +91,8 @@ def run_all_runnable(cfg: Config) -> dict[str, object]:
     """Report the instrument check plus the resolved configuration and environment.
 
     The paper's real-data experiments (Exp. 1 attribution, Exp. 2 revocation, and Exp. 3 attack
-    context) are run by dedicated scripts; this function provides the instrument-validation property.
+    context) are run by dedicated scripts; this function provides the
+    instrument-validation property.
     """
     out: dict[str, object] = {"environment": _env_block(), "config": cfg.as_dict()}
     out["check"] = run_check(cfg)

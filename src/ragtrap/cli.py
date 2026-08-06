@@ -5,7 +5,8 @@ Subcommands:
 * ``run-experiments`` -- run the runnable experiments (check, Exp. 1-Exp. 2 plus scaling), write
   ``results/results.json`` and the run manifest. This is the main-claim reproduction path used by
   artifact evaluation.
-* ``selftest`` -- run only the instrument check (validation on synthetic data) for a fast smoke test.
+* ``selftest`` -- run only the instrument check (validation on synthetic data) for a
+  fast smoke test.
 * ``demo`` -- a minimal end-to-end demonstration of ingest -> traceback -> revoke-source on a
   small synthetic corpus, printing the indexed lookup and the one-command purge.
 
@@ -143,7 +144,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"ragtrap {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_run = sub.add_parser("run-experiments", help="run instrument check + Exp. 1-2 and write results + manifest")
+    p_run = sub.add_parser(
+        "run-experiments",
+        help="run instrument check + Exp. 1-2 and write results + manifest",
+    )
     p_run.set_defaults(func=cmd_run_experiments)
 
     p_self = sub.add_parser("selftest", help="fast instrument-check validation smoke test")

@@ -108,7 +108,7 @@ def main() -> int:
         print(f"  {'source of these numbers':<30}: recomputed on this machine just now")
     else:
         print(f"  {'source of these numbers':<30}: read from the committed --full run")
-        print(f"  {'':<30}  ({src}); regenerating it needs a CUDA GPU")
+        print(f"  {'':<30}  ({src}); add --run to regenerate it here")
     # Cost measured on THIS machine by the calling script. Times and memory are
     # hardware-dependent, so they are reported and never gated.
     elapsed = os.environ.get("RAGTRAP_CLAIM_ELAPSED")

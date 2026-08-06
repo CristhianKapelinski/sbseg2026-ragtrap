@@ -167,7 +167,10 @@ def main() -> int:
     fig_drift(real, ax1)
     fig_revoke(scaling, ax2)
     fig.tight_layout(pad=0.6)
-    fig.savefig(args.out)
+    # Omit the creation timestamp so a regeneration is byte-identical to the committed
+    # PDF. Without this the only difference between the reviewer's figure and the
+    # paper's is a date, which makes `git diff` report a change that is not one.
+    fig.savefig(args.out, metadata={"CreationDate": None})
     plt.close(fig)
     print(f"wrote {args.out}")
     return 0

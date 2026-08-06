@@ -1,6 +1,7 @@
 """Run the real, non-circular Exp. 1 evaluation and write results/real_results.json.
 
-Exp. 1 compares, on the *identical* third-party suspect set (RAGOrigin released e5-retrieval feedback
+Exp. 1 compares, on the *identical* third-party suspect set (RAGOrigin released
+e5-retrieval feedback
 over PoisonedRAG's NQ attack), RAGtrap's indexed content-hash lookup against the published
 RAGForensics LLM-judge baseline (run on a local model, so there is no API billing). Detection
 metrics carry 95% Wilson CIs; latency carries a bootstrap CI; the cost signal is the model-call

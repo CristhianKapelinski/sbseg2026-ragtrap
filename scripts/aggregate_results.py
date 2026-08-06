@@ -1,6 +1,7 @@
 """Aggregate all experiment outputs into results/results.json and a LaTeX macro block.
 
-Reads results/real_results.json (Exp. 1 + baseline), results/scaling_results.json (Exp. 1 scaling sweep),
+Reads results/real_results.json (Exp. 1 + baseline), results/scaling_results.json
+(Exp. 1 scaling sweep),
 results/aux_results.json (check, exp2, exp3) and emits:
 
 * results/results.json   -- the single canonical results bundle the paper draws from;

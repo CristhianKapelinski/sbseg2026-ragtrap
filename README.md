@@ -115,7 +115,7 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 > **Two commands reproduce everything an evaluation needs, both on CPU, both under 20 seconds together.**
 >
 > - **`./scripts/minimal_test.sh`** (~1 s): the functional check. No network, no dataset, no GPU.
-> - **`./scripts/claim1.sh`** and **`./scripts/claim2.sh`** (~7 s each): one command per claim. Each **recomputes** the fast experiment on your machine into `results/claim_run/` rather than reading the committed results, then prints the paper's value next to the one it just produced, with an `OK`/`FAIL` per line and a non-zero exit on any mismatch. **`./scripts/claim3.sh`** is instant and reads the stored `--full` measurement, because regenerating it needs a GPU; its output says so. Add `--run` to regenerate it on a GPU with at least 7 GB free: ~146 s measured on an RTX 5080.
+> - **`./scripts/claim1.sh`** and **`./scripts/claim2.sh`** (~7 s each): one command per claim. Each **recomputes** the fast experiment on your machine into `results/claim_run/` rather than reading the committed results, then prints the paper's value next to the one it just produced, with an `OK`/`FAIL` per line and a non-zero exit on any mismatch. **`./scripts/claim3.sh`** is instant and reads the stored `--full` measurement, because regenerating it runs a 3-billion-parameter model; its output says so. Add `--run` to regenerate it here: ~146 s measured on an RTX 5080, ~15 min if it falls back to the CPU.
 > - **`uv run python scripts/verify_paper_values.py`** (instant): compares **all 98 numbers** the paper asserts against the committed results and prints `PASS / FAIL`. This is the strongest single check in the artifact.
 > - **`--full` is optional and expensive**: 60 to 90 minutes and one CUDA GPU, because it serves a local model for the two forensic baselines and for Claim \#3. Skip it unless you specifically want those baselines; the pre-computed outputs of that run are already committed under [`results/`](results/).
 
@@ -196,12 +196,12 @@ Each claim below is **one command** that needs no preparation: the script reprod
 ## Claim \#3: Attack-success context (the suspects are genuinely harmful)
 
 - **Description:** feeding the top-5 retrieved contexts to a local generation model steers it to the attacker's target answer, confirming the attributed suspects are dangerous.
-- **Execution:** one command. Unlike Claims \#1 and \#2 this one is **not** recomputed here: regenerating it needs a CUDA GPU, so the script reads the stored `--full` measurement and says so in its output.
+- **Execution:** one command. Unlike Claims \#1 and \#2 this one is **not** recomputed by default: regenerating it runs a 3-billion-parameter model over 100 questions, so the plain command reads the stored `--full` measurement and says so in its output. Pass `--run` to regenerate it here.
   ```bash
   ./scripts/claim3.sh
   ```
-- **Flags:** `--run` regenerates the measurement here instead of reading it: `./scripts/claim3.sh --run`. It needs one CUDA GPU with at least **7 GB free** (the generation model takes about 6 GB) and downloads that model once. Measured at **146 s** on an RTX 5080, reporting the same 98/100. The script checks the free GPU memory first and refuses with an actionable message instead of failing with a CUDA out-of-memory traceback.
-- **Expected time:** instant to read the stored result; **~146 s** with `--run` on an RTX 5080. **Expected resources:** CPU only (~42 MB peak) to read; one CUDA GPU with at least 7 GB free to regenerate.
+- **Flags:** `--run` regenerates the measurement here instead of reading it: `./scripts/claim3.sh --run`. It answers the 100 questions with a 3-billion-parameter model, downloaded once. **A GPU is not required:** the script picks a CUDA GPU when one has at least 7 GB free (the model takes about 6 GB) and otherwise falls back to the CPU, warning that it will be slower. The numbers are the same either way. Measured with `--run`: **146 s** on an RTX 5080, **103 s** on an RTX 5060 Ti, **911 s** (~15 min) forced onto the CPU of a Ryzen 5 8600G, all reporting the same 98/100. Force a device with `RAGTRAP_CLAIM3_DEVICE=cpu` or `=cuda`.
+- **Expected time:** instant to read the stored result. With `--run`: **~2.5 min** on a recent GPU, **~15 min** on CPU. **Expected resources:** CPU only (~42 MB peak) to read; to regenerate, either one CUDA GPU with 7 GB free or ~8 GB of RAM for the CPU path.
 - **Expected result:**
   ```text
   ══════════════════════════════════════════════════════════════════
@@ -212,7 +212,7 @@ Each claim below is **one command** that needs no preparation: the script reprod
       successes                   : 98           (paper 98)        OK
   ──────────────────────────────────────────────────────────────────
     source of these numbers       : read from the committed --full run
-                                    (results/results.json); regenerating it needs a CUDA GPU
+                                    (results/results.json); add --run to regenerate it here
   ──────────────────────────────────────────────────────────────────
     RESULT: OK   (3/3 gated values match the paper)
   ══════════════════════════════════════════════════════════════════

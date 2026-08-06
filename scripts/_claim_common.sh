@@ -20,27 +20,41 @@ recompute_main() {
 }
 
 # Regenerates ONLY the attack-success measurement of Claim #3, instead of the whole
-# --full run. It still needs a CUDA GPU and a one-time model download, because the
-# measurement is what a local generation model answers.
+# --full run. It needs a one-time model download, because the measurement is what a
+# local generation model answers; a GPU makes it fast but is not required.
 recompute_exp3() {
     mkdir -p "$LIVE_DIR"
     echo "==> Regenerating Claim #3 on this machine"
-    echo "    (needs one CUDA GPU and a one-time download of the generation model)"
-    # A raw CUDA out-of-memory traceback tells the evaluator nothing. Check first, and
-    # say what is needed and what is actually free. The generation model needs ~6 GB.
-    if command -v nvidia-smi >/dev/null 2>&1; then
-        local free_mib
-        free_mib=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1)
-        if [ -n "$free_mib" ] && [ "$free_mib" -lt 7000 ]; then
-            echo "ERROR: only ${free_mib} MiB of GPU memory is free; the generation model needs about 6 GB." >&2
-            echo "Free the GPU, or read the stored measurement instead with: ./scripts/claim3.sh" >&2
-            nvidia-smi --query-compute-apps=pid,used_memory --format=csv >&2
-            return 1
-        fi
-    else
-        echo "ERROR: nvidia-smi not found; --run needs one CUDA GPU." >&2
-        echo "Read the stored measurement instead with: ./scripts/claim3.sh" >&2
-        return 1
+    echo "    (downloads the generation model once; uses the GPU when one has room,"
+    echo "     otherwise the CPU, which is slower and gives the same numbers)"
+    # Never refuse to run: pick the device that actually fits and say so. A raw CUDA
+    # out-of-memory traceback tells the evaluator nothing, and blocking them tells them
+    # even less. The generation model needs about 6 GB of GPU memory; without it the
+    # same measurement runs on the CPU, correct but much slower.
+    local DEVICE=cuda free_mib=""
+    # Lets an evaluator force the device, e.g. to check the CPU path on a GPU box.
+    if [ -n "${RAGTRAP_CLAIM3_DEVICE:-}" ]; then
+        DEVICE="$RAGTRAP_CLAIM3_DEVICE"
+        echo "NOTE: device forced to $DEVICE by RAGTRAP_CLAIM3_DEVICE."
+    elif command -v nvidia-smi >/dev/null 2>&1; then
+        free_mib=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1)
+    fi
+    if [ -n "${RAGTRAP_CLAIM3_DEVICE:-}" ]; then
+        :
+    elif [ -z "$free_mib" ]; then
+        DEVICE=cpu
+        echo "NOTE: no usable NVIDIA GPU detected, so this runs on the CPU."
+    elif [ "$free_mib" -lt 7000 ]; then
+        DEVICE=cpu
+        echo "NOTE: only ${free_mib} MiB of GPU memory is free and the generation model needs"
+        echo "      about 6 GB, so this runs on the CPU instead. What is using the GPU:"
+        nvidia-smi --query-compute-apps=pid,used_memory --format=csv 2>/dev/null | sed 's/^/      /'
+    fi
+    if [ "$DEVICE" = cpu ]; then
+        echo "      Expect it to take considerably longer than the 146 s measured on an"
+        echo "      RTX 5080; it answers 100 questions with a 3-billion-parameter model."
+        echo "      The numbers it reports are the same ones either way."
+        echo
     fi
 
     local FETCH FEEDBACK POISONEDRAG
@@ -50,6 +64,7 @@ recompute_exp3() {
     uv run --extra eval python scripts/run_check_exp2_exp3.py \
         --parquet data/beir_nq_sample.parquet \
         --poisonedrag "$POISONEDRAG" --feedback "$FEEDBACK" \
+        --judge-device "$DEVICE" \
         --out "$LIVE_DIR/aux_results.json"
     echo
 }

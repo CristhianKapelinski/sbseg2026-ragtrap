@@ -31,6 +31,10 @@ def main() -> int:
     ap.add_argument("--asr-top-k", type=int, default=5)
     ap.add_argument("--e3-docs", type=int, default=250)
     ap.add_argument("--skip-asr", action="store_true")
+    ap.add_argument("--judge-device", default="cuda",
+                    help="cuda (default) or cpu. CPU works and is much slower.")
+    ap.add_argument("--judge-dtype", default=None,
+                    help="defaults to float16 on cuda and float32 on cpu")
     ap.add_argument("--out", default="results/aux_results.json")
     args = ap.parse_args()
 
@@ -61,13 +65,15 @@ def main() -> int:
         from ragtrap.llm_judge import LocalLLMJudge
 
         fb = load_ragorigin_feedback(args.feedback, expected_sha256=RAGORIGIN_FEEDBACK_SHA256)
-        judge = LocalLLMJudge(args.judge_model)
+        dtype = args.judge_dtype or ("float16" if args.judge_device == "cuda" else "float32")
+        judge = LocalLLMJudge(args.judge_model, device=args.judge_device, dtype=dtype)
         out["exp3"] = run_asr(fb, judge, top_k=args.asr_top_k)
 
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(out, indent=2), encoding="utf-8")
     print(f"wrote {args.out}")
-    print(json.dumps({k: (v if k in ("check",) else "...") for k, v in out.items()}, indent=2)[:400])
+    summary = {k: (v if k in ("check",) else "...") for k, v in out.items()}
+    print(json.dumps(summary, indent=2)[:400])
     return 0
 
 
