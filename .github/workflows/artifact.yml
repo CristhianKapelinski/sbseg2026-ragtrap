@@ -1,0 +1,54 @@
+name: artifact
+
+# Runs the evaluator's own path on a clean Ubuntu runner, on every push and once a
+# week. The point is not the unit tests: it is that the exact commands the README
+# gives a reviewer keep working on a machine that has none of the author's state.
+# A drift in a pinned dependency, a file forgotten in .gitignore, or a script that
+# only ran because something was already installed shows up here and not in a review.
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  reviewer-path:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install pinned dependencies
+        run: uv sync
+
+      - name: Minimal test
+        run: ./scripts/minimal_test.sh
+
+      - name: Claim 1 (recomputed here)
+        run: ./scripts/claim1.sh
+
+      - name: Claim 2, the main claim (recomputed here)
+        run: ./scripts/claim2.sh
+
+      - name: Claim 3 (stored --full measurement; no GPU on the runner)
+        run: ./scripts/claim3.sh
+
+      - name: Every paper value
+        run: uv run python scripts/verify_paper_values.py
+
+      - name: Regenerate the paper figure
+        run: uv run python scripts/make_figures.py
+
+      - name: The committed reference results must be untouched
+        run: |
+          if ! git diff --quiet -- results/; then
+            echo "A claim wrote into results/; it must write into results/claim_run/ instead." >&2
+            git --no-pager diff --stat -- results/ >&2
+            exit 1
+          fi
+          echo "results/ is unchanged"
