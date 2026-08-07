@@ -98,8 +98,9 @@ The clean BEIR substrate for the fast path is the frozen, checksum-pinned `data/
 git clone https://github.com/CristhianKapelinski/sbseg2026-ragtrap && cd sbseg2026-ragtrap
 
 # 2. Install uv (skip if you already have it). The installer places uv in ~/.local/bin,
-#    which the current shell only picks up after the `source` below or a new login shell.
-curl -LsSf https://astral.sh/uv/install.sh | sh && . "$HOME/.local/bin/env"
+#    which the current shell only picks up after the `export` below or a new login shell.
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"   # where the installer puts uv; the current shell needs telling
 
 # 3. Install pinned dependencies (creates .venv from uv.lock)
 uv sync
