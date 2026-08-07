@@ -221,6 +221,16 @@ Exact numbers (with 95% Wilson CIs and N) for the full run are in [`results/resu
 
 ---
 
+## Cleaning up
+
+One command removes everything a run created, the environment, the live claim outputs and the corpora under `$RAGTRAP_DATA_ROOT`. It never touches anything tracked by git.
+
+```bash
+./cleanup.sh
+```
+
+Pass `--dry-run` to list what would go without removing it (about ~440 MB).
+
 ## License
 
 This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for the full text.
