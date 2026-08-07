@@ -19,8 +19,21 @@ RAGtrap is a recovery layer for retrieval-augmented-generation (RAG) corpora. It
 | [Installation](#installation) | Get the artifact, install uv, `uv sync` |
 | [Minimal Test](#minimal-test) | One-command end-to-end functional check (~1 s) |
 | [Experiments](#experiments) | Reproduction of the paper's claims (check + Exp. 1-3) |
+| [Cleaning up](#cleaning-up) | One command removes what a run created |
 | [License](#license) | Licensing information |
 | [How to cite](#how-to-cite) | Paper reference and machine-readable `CITATION.cff` |
+
+The repository is organized as follows:
+
+| Path | Contents |
+|---|---|
+| [`src/ragtrap/`](src/ragtrap/) | The package, one module per concern: `gate`, `signing`, `datastore`, `traceback`, `revocation`, `realeval`, `scaling` |
+| [`scripts/`](scripts/) | The reviewer's entry points: [`minimal_test.sh`](scripts/minimal_test.sh), [`claim1.sh`](scripts/claim1.sh), [`claim2.sh`](scripts/claim2.sh), [`claim3.sh`](scripts/claim3.sh), and the input fetcher |
+| [`data/`](data/) | The frozen, checksum-pinned BEIR sample used by the fast path |
+| [`results/`](results/) | The run of record: [`results.json`](results/results.json), the per-experiment outputs and [`macros.tex`](results/macros.tex) |
+| [`expected/`](expected/) | [`paper_macros.tex`](expected/paper_macros.tex): the frozen camera-ready values, 98 of them |
+| [`tests/`](tests/) | The 33 offline unit tests |
+| [`cleanup.sh`](cleanup.sh) | Removes everything a run created |
 
 ---
 
@@ -108,7 +121,7 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 
 ## Experiments
 
-> # ⚠️ READ THIS BEFORE RUNNING ANY EXPERIMENT
+> ### READ THIS BEFORE RUNNING ANY EXPERIMENT
 >
 > **Two commands reproduce everything an evaluation needs, both on CPU, both under 20 seconds together.**
 >
