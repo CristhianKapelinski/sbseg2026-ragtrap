@@ -37,7 +37,14 @@ recompute_exp3() {
         DEVICE="$RAGTRAP_CLAIM3_DEVICE"
         echo "NOTE: device forced to $DEVICE by RAGTRAP_CLAIM3_DEVICE."
     elif command -v nvidia-smi >/dev/null 2>&1; then
-        free_mib=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1)
+        # nvidia-smi being installed does not mean it works: a kernel update that
+        # outpaces the userspace driver makes it exit non-zero with "Driver/library
+        # version mismatch". Under `set -o pipefail` that status propagates out of the
+        # assignment and `set -e` kills the run with it, so the CPU fallback below is
+        # never reached -- the exact refusal this function exists to avoid. Swallow the
+        # failure and treat any non-numeric answer as "no usable GPU".
+        free_mib=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1) || free_mib=""
+        case "$free_mib" in ""|*[!0-9]*) free_mib="" ;; esac
     fi
     if [ -n "${RAGTRAP_CLAIM3_DEVICE:-}" ]; then
         :
