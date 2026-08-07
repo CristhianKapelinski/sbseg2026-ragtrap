@@ -6,6 +6,8 @@ RAGtrap is a recovery layer for retrieval-augmented-generation (RAG) corpora. It
 
 > **SBSeg 2026 artifact evaluation.** Review instructions: [submission](https://doc-artefatos.github.io/sbseg2026/subinstrucoes.html) / [review](https://doc-artefatos.github.io/sbseg2026/revinstrucoes.html).
 
+> **For the artifact evaluation, this README is the only file you need to read.** The other Markdown files in the repository are complementary: they document internals and go deeper than the review requires.
+
 ---
 
 ## README Structure
