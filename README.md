@@ -106,7 +106,7 @@ The clean BEIR substrate for the fast path is the frozen, checksum-pinned `data/
 
 ```bash
 # 1. Clone the artifact
-git clone https://github.com/CristhianKapelinski/sbseg2026-ragtrap && cd sbseg2026-ragtrap
+git clone https://gitlab.com/cristhianavila.aluno/sbseg2026-ragtrap && cd sbseg2026-ragtrap
 
 # 2. Install uv (skip if you already have it). The installer places uv in ~/.local/bin,
 #    which the current shell only picks up after the `export` below or a new login shell.
