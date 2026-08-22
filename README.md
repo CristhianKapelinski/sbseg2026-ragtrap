@@ -1,6 +1,8 @@
 # RAGtrap: Source Revocation and Indexed Provenance Lookup for Poisoned RAG Corpora
 
-RAGtrap is a recovery layer for retrieval-augmented-generation (RAG) corpora. It records a signed provenance record for every ingested chunk and maintains indices by source and content hash. In the evaluated mixed documents, source revocation removes **0.00 benign-source content**, compared with a **0.52 false-purge rate** for document-level removal. Exact suspect chunks require one indexed lookup and no model request. The prototype uses an in-memory datastore, so its latency results measure the index algorithms rather than end-to-end vector-database remediation.
+Retrieval-augmented generation (RAG) answers questions from passages retrieved out of a corpus, and poisoned passages can steer those answers: in a published attack, 5 passages per target question sufficed to produce the attacker's chosen answer. Once a source is known to be compromised, recovery means finding the passages it supplied and removing them without discarding unrelated content. RAGtrap records a signed provenance entry for every passage at ingestion, indexed by source and by content hash. Tracing a suspect passage is then one hash lookup and no language-model request, against one or more per passage for post-incident attribution in the literature. Revoking a source removes only its passages, whereas deleting whole documents also discards benign ones. Exact hashing cannot attribute content changed after ingestion, nor content supplied by more than one source, so RAGtrap supports recovery from a known compromised source but does not detect or prevent poisoning.
+
+*The paragraph above is the paper's abstract, with its macros resolved. Two notes that belong to the artifact rather than to the paper: the measured false-purge rate is 0.00 for source revocation against 0.52 for document-level removal, and recall falls to 0.69 under 30% post-ingestion drift; and the prototype uses an in-memory datastore, so its latency results measure the index algorithms rather than end-to-end vector-database remediation.*
 
 > **Paper:** *RAGtrap: Source Revocation and Indexed Provenance Lookup for Poisoned RAG Corpora* (SBSeg 2026).
 
@@ -18,9 +20,10 @@ RAGtrap is a recovery layer for retrieval-augmented-generation (RAG) corpora. It
 | [Basic Information](#basic-information) | Hardware, OS, and software environment |
 | [Dependencies](#dependencies) | Key pinned packages and how third-party inputs are fetched |
 | [Security Concerns](#security-concerns) | What runs locally, where keys/data live, network use |
-| [Installation](#installation) | Get the artifact, install uv, `uv sync` |
-| [Minimal Test](#minimal-test) | One-command end-to-end functional check (~1 s) |
-| [Experiments](#experiments) | Reproduction of the paper's claims (check + Exp. 1-3) |
+| [Installation](#installation) | Steps 1-4: host tools, clone, install uv, `uv sync`. No experiment runs here |
+| [Execution](#execution) | Every run command, in order, with its time and what it produces |
+| [Minimal Test](#minimal-test) | Execution step 1: one-command end-to-end functional check (~1 s) |
+| [Experiments](#experiments) | Execution steps 2-7: reproduction of the paper's claims (check + Exp. 1-3) |
 | [Cleaning up](#cleaning-up) | One command removes what a run created |
 | [License](#license) | Licensing information |
 | [How to cite](#how-to-cite) | Paper reference and machine-readable `CITATION.cff` |
@@ -56,7 +59,7 @@ The seals considered are: **Available (SeloD)**, **Functional (SeloF)**, **Susta
 |---|---|
 | **OS** | Linux (x86_64); validated on Ubuntu/Debian, kernel 6.17 |
 | **Python** | 3.10+ (validated on 3.12 and 3.13), managed by [`uv`](https://astral.sh/uv) |
-| **RAM** | Fast path: < 1 GB. Full `--full` scaling point builds ~4.4M signed records and uses up to ~10 GB |
+| **RAM** | Fast path (minimal test, Claim \#1, Claim \#2): < 1 GB. **`./scripts/claim3.sh --run` on the CPU is the one memory-hungry step: 16.9 GiB peak measured, so plan for 20 GB free** (on a GPU that same step runs in ~6 GB of VRAM instead; we did not measure its host-RAM peak) — see [Claim \#3](#claim-3-attack-success-context-the-suspects-are-genuinely-harmful). Full `--full` scaling point builds ~4.4M signed records and uses up to ~10 GB |
 | **Disk** | `.venv` after `uv sync`: ~333 MB; fast path adds nothing (337 KB sample ships in git). `--full` adds ~764 MB (BEIR corpus) + a few GB (local model) under `$RAGTRAP_DATA_ROOT` |
 | **GPU** | **Not required** for the minimal test or the main claim. Only the `--full` model-served baselines (Exp. 1 LLM judge / RAGOrigin proxy, Exp. 3 generation) use a single CUDA GPU |
 | **Host tools** | `git` and `curl`, used by the installation steps and by the one-time fetch of the two third-party inputs. Nothing else is installed outside the project's `.venv` |
@@ -66,16 +69,10 @@ The seals considered are: **Available (SeloD)**, **Functional (SeloF)**, **Susta
 
 ## Dependencies
 
-**Host tools:** `git` (to clone), `curl` (to fetch the uv installer) and `uv`. **No Docker, no compiler, no GPU driver.** Every claim script checks for `uv` before doing any work and prints the installer plus the PATH line the installer cannot apply to the shell that ran it.
+This section lists *what* the artifact depends on. The commands that install it are steps 1 to 4
+of [Installation](#installation).
 
-```bash
-sudo apt-get update && sudo apt-get install -y git curl   # Debian, Ubuntu
-sudo dnf install -y git curl                              # Fedora, RHEL
-sudo pacman -Sy --needed git curl                         # Arch
-sudo zypper install -y git curl                           # openSUSE
-curl -LsSf https://astral.sh/uv/install.sh | sh           # uv
-export PATH="$HOME/.local/bin:$PATH"                      # needed in THIS shell after installing uv
-```
+**Host tools:** `git` (to clone), `curl` (to fetch the uv installer) and `uv`. **No Docker, no compiler, no GPU driver.** Every claim script checks for `uv` before doing any work and prints the installer plus the PATH line the installer cannot apply to the shell that ran it.
 
 All packages are pinned in [`pyproject.toml`](pyproject.toml) / [`uv.lock`](uv.lock) and installed by `uv sync` (no manual step):
 
@@ -104,20 +101,74 @@ The clean BEIR substrate for the fast path is the frozen, checksum-pinned `data/
 
 ## Installation
 
+Installation is four steps and touches nothing outside the project's `.venv`. No command in this
+section runs an experiment; the commands that do are in [Execution](#execution).
+
+**Step 1 — install the two host tools.** Only `git` and `curl` are needed; pick the line for your
+distribution.
+
 ```bash
-# 1. Clone the artifact
-git clone https://gitlab.com/cristhianavila.aluno/sbseg2026-ragtrap && cd sbseg2026-ragtrap
+sudo apt-get update && sudo apt-get install -y git curl   # Debian, Ubuntu
+sudo dnf install -y git curl                              # Fedora, RHEL
+sudo pacman -Sy --needed git curl                         # Arch
+sudo zypper install -y git curl                           # openSUSE
+```
 
-# 2. Install uv (skip if you already have it). The installer places uv in ~/.local/bin,
-#    which the current shell only picks up after the `export` below or a new login shell.
+**Step 2 — get the artifact.**
+
+```bash
+git clone https://gitlab.com/cristhianavila.aluno/sbseg2026-ragtrap
+cd sbseg2026-ragtrap
+```
+
+**Step 3 — install `uv`** (skip if you already have it). The installer places `uv` in
+`~/.local/bin`, which the shell that ran the installer only picks up after the `export` below or
+after a new login shell.
+
+```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"   # where the installer puts uv; the current shell needs telling
+export PATH="$HOME/.local/bin:$PATH"   # the current shell needs telling
+```
 
-# 3. Install pinned dependencies (creates .venv from uv.lock)
+**Step 4 — install the pinned dependencies.** This creates `.venv` from `uv.lock`; there is no
+`pip`, `venv`, or `requirements.txt` step.
+
+```bash
 uv sync
 ```
 
-`uv sync` took **~14.5 s** on the reference machine with a cold uv cache (downloading wheels) and **~1.5 s** to rebuild the environment with a warm cache. Every command below is run as `uv run <...>`; no `pip`, `venv`, or `requirements.txt` is involved.
+`uv sync` took **~14.5 s** on the reference machine with a cold uv cache (downloading wheels) and
+**~1.5 s** to rebuild the environment with a warm cache. The heavy `eval` extra is *not* installed
+by this step; only the optional `--full` run needs it, and it is documented where it is used.
+
+**Check that installation worked** (this only prints the version; it runs no experiment):
+
+```bash
+uv run ragtrap --version
+```
+
+---
+
+## Execution
+
+Run every command below from the repository root, with the `.venv` already created by
+[Installation](#installation). The scripts drive `uv run` themselves and check that `uv` is on
+`PATH` before doing any work. Each step is independent, so you can stop after any of them; steps 1
+to 3 are all an evaluation needs and take under 20 seconds together, on CPU.
+
+| Step | Command | What it is | Time |
+|---|---|---|---|
+| 1 | `./scripts/minimal_test.sh` | The functional check, end to end, plus the unit suite. No network, no dataset, no GPU | ~1 s |
+| 2 | `./scripts/claim1.sh` | Claim \#1, recomputed on your machine | ~7 s |
+| 3 | `./scripts/claim2.sh` | Claim \#2, the main claim, recomputed on your machine | ~7 s |
+| 4 | `./scripts/claim3.sh` | Claim \#3, read from the committed `--full` run | instant |
+| 5 | `uv run python scripts/verify_paper_values.py` | All 98 numbers the paper asserts, against the committed results | instant |
+| 6 (optional) | `./scripts/claim3.sh --run` | Regenerate Claim \#3 here with a 3B model. **Read [Claim \#3](#claim-3-attack-success-context-the-suspects-are-genuinely-harmful) first: the CPU route peaked at 16.9 GiB in our measurement, so it needs ~20 GB of free RAM** | ~2.5 min on a GPU; ~15–18 min on CPU |
+| 7 (optional) | `./scripts/experiment_main.sh --full` | The whole model-served run | 60–90 min, one CUDA GPU |
+| 8 | `./cleanup.sh` | Remove everything the run created | instant |
+
+Each step is documented in full below: step 1 under [Minimal Test](#minimal-test), steps 2 to 7
+under [Experiments](#experiments), step 8 under [Cleaning up](#cleaning-up).
 
 ---
 
@@ -140,7 +191,7 @@ One command (~1 s, no network, no GPU). It exercises the real pipeline end to en
 > **Two commands reproduce everything an evaluation needs, both on CPU, both under 20 seconds together.**
 >
 > - **`./scripts/minimal_test.sh`** (~1 s): the functional check. No network, no dataset, no GPU.
-> - **`./scripts/claim1.sh`** and **`./scripts/claim2.sh`** (~7 s each): one command per claim. Each **recomputes** the fast experiment on your machine into `results/claim_run/` rather than reading the committed results, then prints the paper's value next to the one it just produced, with an `OK`/`FAIL` per line and a non-zero exit on any mismatch. **`./scripts/claim3.sh`** is instant and reads the stored `--full` measurement, because regenerating it runs a 3-billion-parameter model; its output says so. Add `--run` to regenerate it here: ~146 s measured on an RTX 5080, ~15 min if it falls back to the CPU.
+> - **`./scripts/claim1.sh`** and **`./scripts/claim2.sh`** (~7 s each): one command per claim. Each **recomputes** the fast experiment on your machine into `results/claim_run/` rather than reading the committed results, then prints the paper's value next to the one it just produced, with an `OK`/`FAIL` per line and a non-zero exit on any mismatch. **`./scripts/claim3.sh`** is instant and reads the stored `--full` measurement, because regenerating it runs a 3-billion-parameter model; its output says so. Add `--run` to regenerate it here: ~146 s measured on an RTX 5080. **Before running it on the CPU, read [Claim \#3](#claim-3-attack-success-context-the-suspects-are-genuinely-harmful): that route loads the model in float32 and peaked at 16.9 GiB in our measurement, not the ~8 GB this README used to claim.**
 > - **`uv run python scripts/verify_paper_values.py`** (instant): compares **all 98 numbers** the paper asserts against the committed results and prints `PASS / FAIL`. This is the strongest single check in the artifact.
 > - **`--full` is optional and expensive**: 60 to 90 minutes and one CUDA GPU, because it serves a local model for the two forensic baselines and for Claim \#3. Skip it unless you specifically want those baselines; the pre-computed outputs of that run are already committed under [`results/`](results/).
 
@@ -225,8 +276,35 @@ Each claim below is **one command** that needs no preparation: the script reprod
   ```bash
   ./scripts/claim3.sh
   ```
-- **Flags:** `--run` regenerates the measurement here instead of reading it: `./scripts/claim3.sh --run`. It answers the 100 questions with a 3-billion-parameter model, downloaded once. **A GPU is not required:** the script picks a CUDA GPU when one has at least 7 GB free (the model takes about 6 GB) and otherwise falls back to the CPU, warning that it will be slower. The numbers are the same either way. Measured with `--run`: **146 s** on an RTX 5080, **103 s** on an RTX 5060 Ti, **911 s** (~15 min) forced onto the CPU of a Ryzen 5 8600G, all reporting the same 98/100. Force a device with `RAGTRAP_CLAIM3_DEVICE=cpu` or `=cuda`.
-- **Expected time:** instant to read the stored result. With `--run`: **~2.5 min** on a recent GPU, **~15 min** on CPU. **Expected resources:** CPU only (~42 MB peak) to read; to regenerate, either one CUDA GPU with 7 GB free or ~8 GB of RAM for the CPU path.
+- **Flags:** `--run` regenerates the measurement here instead of reading it: `./scripts/claim3.sh --run`. It answers the 100 questions with a 3-billion-parameter model, downloaded once. **A GPU is not required, but the CPU route is expensive in RAM** (see the warning below): the script picks a CUDA GPU when one has at least 7 GB free (the model takes about 6 GB) and otherwise falls back to the CPU, warning that it will be slower. The numbers are the same either way. Measured with `--run`: **146 s** on an RTX 5080, **103 s** on an RTX 5060 Ti, **911 s** (~15 min) forced onto the CPU of a Ryzen 5 8600G, all reporting the same 98/100. Force a device with `RAGTRAP_CLAIM3_DEVICE=cpu` or `=cuda`.
+
+  > **RAM on the CPU route — measured, and larger than a 3B model suggests.**
+  > On the GPU the model is loaded in `float16`; on the CPU the runner loads it in `float32`
+  > (`scripts/run_check_exp2_exp3.py` picks the dtype from the device), which doubles what the
+  > weights occupy. Loading needs about 5 GiB more than generation goes on to hold, and that
+  > extra is released once the model is in memory. Measured here, forced with
+  > `RAGTRAP_CLAIM3_DEVICE=cpu`:
+  >
+  > | | |
+  > |---|---|
+  > | **Peak resident memory** | **17,775,624 kB = 16.9 GiB (18.2 GB)** |
+  > | When the peak happens | while the model loads, not during generation |
+  > | Held throughout generation | ~11.6 GiB resident, nearly all of it anonymous |
+  > | Wall clock for that run | 1053 s, and it still reported 98/100 |
+  > | Host | AMD Ryzen 5 8600G, 12 threads, 30.5 GiB RAM, no GPU used |
+  > | How it was measured | `/usr/bin/time -v` ("Maximum resident set size") and `VmHWM` sampled from `/proc/<pid>/status`; the two agree to the kilobyte |
+  >
+  > **So: give the CPU route at least 20 GB of free RAM.** This corrects an earlier figure in this
+  > README, which claimed ~8 GB and was wrong: SBSeg artifact review reported the run being killed
+  > by the OOM killer during model loading on a VM with 8 GB and again on one with ~12 GB, and the
+  > measurement above shows why. Note also that the `peak memory on this machine` line the script
+  > prints is the footprint of the *display* step only (~35 MB); it does not report the
+  > regeneration's peak.
+  >
+  > If you do not have that much RAM, use the GPU route (~6 GB of VRAM), or skip `--run`
+  > entirely: plain `./scripts/claim3.sh` reads the stored measurement and is what the
+  > evaluation needs.
+- **Expected time:** instant to read the stored result. With `--run`: **~2.5 min** on a recent GPU, **~15–18 min** on CPU. **Expected resources:** CPU only (~42 MB peak) to read. To regenerate: either one CUDA GPU with 7 GB free, **or ~20 GB of free RAM for the CPU path** (16.9 GiB peak measured, see the box above).
 - **Expected result:**
   ```text
   ══════════════════════════════════════════════════════════════════
