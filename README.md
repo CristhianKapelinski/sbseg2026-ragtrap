@@ -117,7 +117,7 @@ sudo zypper install -y git curl                           # openSUSE
 **Step 2 — get the artifact.**
 
 ```bash
-git clone https://gitlab.com/cristhianavila.aluno/sbseg2026-ragtrap
+git clone https://github.com/CristhianKapelinski/sbseg2026-ragtrap
 cd sbseg2026-ragtrap
 ```
 
